@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  title       String
+  type        String   @default("novel")
+  genre       String   @default("")
+  style       String   @default("")
+  targetWords Int      @default(0)
+  description String   @default("")
+  worldView   String   @default("")
+  writingReqs String   @default("")
+  coverPrompt String   @default("")
+  status      String   @default("draft")
+
+  chapters      Chapter[]
+  characters    Character[]
+  locations     Location[]
+  organizations Organization[]
+  items         Item[]
+  foreshadowings Foreshadowing[]
+  timelines     Timeline[]
+  worldBuildings WorldBuilding[]
+  aiSettings    AISettings?
+  aiGenerations AIGeneration[]
+}
+
+model Chapter {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title     String @default("")
+  content   String @default("")
+  status    String @default("draft")
+  order     Int    @default(0)
+  wordCount Int    @default(0)
+  summary   String @default("")
+  notes     String @default("")
+
+  histories ChapterHistory[]
+
+  @@index([projectId])
+}
+
+model ChapterHistory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  chapterId String
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  title     String
+  content   String
+  wordCount Int
+  version   Int
+  summary   String @default("")
+
+  @@index([chapterId])
+}
+
+model Character {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name          String
+  identity      String @default("")
+  personality   String @default("")
+  goals         String @default("")
+  relationships String @default("")
+  quirks        String @default("")
+  appearance    String @default("")
+  backstory     String @default("")
+  avatarPrompt  String @default("")
+  order         Int    @default(0)
+
+  @@index([projectId])
+}
+
+model WorldBuilding {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title   String
+  content String
+  type    String @default("general")
+  order   Int    @default(0)
+
+  @@index([projectId])
+}
+
+model Location {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String @default("")
+  type        String @default("")
+  order       Int    @default(0)
+
+  @@index([projectId])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String @default("")
+  type        String @default("")
+  order       Int    @default(0)
+
+  @@index([projectId])
+}
+
+model Item {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String @default("")
+  type        String @default("")
+  order       Int    @default(0)
+
+  @@index([projectId])
+}
+
+model Foreshadowing {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String @default("")
+  chapterHint String @default("")
+  resolved    Boolean @default(false)
+  order       Int    @default(0)
+
+  @@index([projectId])
+}
+
+model Timeline {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title   String
+  content String @default("")
+  timePos Int    @default(0)
+  order   Int    @default(0)
+
+  @@index([projectId])
+}
+
+model AISettings {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId   String  @unique
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  provider    String  @default("openai")
+  model       String  @default("gpt-4o")
+  baseUrl     String  @default("")
+  apiKey      String  @default("")
+  temperature Float   @default(0.7)
+  maxTokens   Int     @default(4096)
+
+  @@index([projectId])
+}
+
+model AIGeneration {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chapterId String?
+
+  workflow     String
+  model        String
+  provider     String
+  prompt       String
+  systemPrompt String  @default("")
+  output       String
+  temperature  Float   @default(0.7)
+  maxTokens    Int     @default(4096)
+
+  @@index([projectId])
+  @@index([chapterId])
+}

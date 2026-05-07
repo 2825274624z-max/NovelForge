@@ -1,0 +1,91 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const projectId = searchParams.get("projectId");
+    const format = searchParams.get("format") || "md";
+
+    if (!projectId) {
+      return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
+    }
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        chapters: { orderBy: { order: "asc" } },
+        characters: { orderBy: { order: "asc" } },
+        worldBuildings: { orderBy: { order: "asc" } },
+        foreshadowings: { orderBy: { order: "asc" } },
+        aiGenerations: { orderBy: { createdAt: "desc" }, take: 50 },
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    if (format === "json") {
+      const json = JSON.stringify(project, null, 2);
+      return new NextResponse(json, {
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Disposition": `attachment; filename="${project.title}.json"`,
+        },
+      });
+    }
+
+    if (format === "txt") {
+      const txt = [
+        project.title,
+        "=".repeat(project.title.length),
+        "",
+        `类型: ${project.type}  题材: ${project.genre}  风格: ${project.style}`,
+        "",
+        project.description ? `简介: ${project.description}\n` : "",
+        "---",
+        "",
+        ...project.chapters.map(
+          (ch, i) =>
+            `第${i + 1}章 ${ch.title}\n${"-".repeat(10)}\n${ch.content}\n`
+        ),
+      ].join("\n");
+
+      return new NextResponse(txt, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${project.title}.txt"`,
+        },
+      });
+    }
+
+    // Default: Markdown
+    const md = [
+      `# ${project.title}`,
+      "",
+      `> **类型**: ${project.type} | **题材**: ${project.genre} | **风格**: ${project.style}`,
+      "",
+      project.description ? `> ${project.description}\n` : "",
+      project.worldView ? `## 世界观\n${project.worldView}\n` : "",
+      "---",
+      "",
+      ...project.chapters
+        .filter((ch) => ch.content)
+        .map((ch, i) => `## 第${i + 1}章 ${ch.title}\n\n${ch.content}\n`),
+    ].join("\n");
+
+    return new NextResponse(md, {
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${project.title}.md"`,
+      },
+    });
+  } catch (error) {
+    console.error("GET /api/export error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
