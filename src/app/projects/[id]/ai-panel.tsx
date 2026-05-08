@@ -39,6 +39,7 @@ interface Props {
   generating: boolean;
   streamingContent: string;
   contextTokenCount: number;
+  contextPreview: string;
   onWorkflowChange: (v: string) => void;
   onMessageChange: (v: string) => void;
   onContextChange: (v: string) => void;
@@ -51,7 +52,7 @@ interface Props {
 
 export function AIPanel({
   workflow, aiMessage, aiContext, aiAssets,
-  generating, streamingContent, contextTokenCount,
+  generating, streamingContent, contextTokenCount, contextPreview,
   onWorkflowChange, onMessageChange, onContextChange, onAssetsChange,
   onGenerate, onCancel, onInsert, onRetry,
 }: Props) {
@@ -169,6 +170,15 @@ export function AIPanel({
                   ))}
                 </div>
               </div>
+
+              {contextPreview && (
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">上下文预览</Label>
+                  <div className="text-[10px] text-muted-foreground/60 leading-relaxed bg-muted/20 rounded p-2 max-h-24 overflow-y-auto whitespace-pre-wrap break-all">
+                    {contextPreview}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -125,7 +125,7 @@ export default function ProjectPage() {
     return () => window.removeEventListener("toggle-ai-panel", toggle);
   }, []);
 
-  const aiGen = useAIGeneration({ projectForm, aiSettings, assets: { characters: chars, worldItems: worlds, locations: locs, orgs, items, fores, timelines: tls }, currentChapterId, projectId, editorRef });
+  const aiGen = useAIGeneration({ projectForm, aiSettings, assets: { characters: chars, worldItems: worlds, locations: locs, orgs, items, fores, timelines: tls }, chapters, currentChapterId, currentChapterContent: chapterContent, projectOutline: projectData?.outline || "", projectId, editorRef });
 
   // 字数追踪
   const lastWC = useRef(0);
@@ -385,7 +385,7 @@ export default function ProjectPage() {
             <IconBtn onClick={closeAIPanel} icon={PanelRightClose} tip="关闭 AI 面板" size="xs" />
           </div>
           <AIPanel workflow={aiGen.workflow} aiMessage={aiGen.aiMessage} aiContext={aiGen.aiContext} aiAssets={aiGen.aiAssets}
-            generating={aiGen.generating} streamingContent={aiGen.streamingContent} contextTokenCount={aiGen.contextTokenCount}
+            generating={aiGen.generating} streamingContent={aiGen.streamingContent} contextTokenCount={aiGen.contextTokenCount} contextPreview={aiGen.contextPreview}
             onWorkflowChange={aiGen.setWorkflow} onMessageChange={aiGen.setAiMessage} onContextChange={aiGen.setAiContext}
             onAssetsChange={aiGen.setAiAssets} onGenerate={aiGen.handleGenerate} onCancel={aiGen.handleCancel} onInsert={aiGen.handleInsert} onRetry={aiGen.handleRetry} />
         </div>
