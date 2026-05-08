@@ -19,13 +19,6 @@
     "directories": {
       "output": "release"
     },
-    "files": [
-      "electron/**/*",
-      ".next/**/*",
-      "prisma/**/*",
-      "public/**/*",
-      "package.json"
-    ],
     "extraResources": [
       {
         "from": ".next/standalone",
@@ -42,15 +35,10 @@
     ],
     "win": {
       "target": [
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
+        { "target": "zip", "arch": ["x64"] }
       ],
-      "icon": "public/favicon.ico"
-    },
-    "portable": {
-      "artifactName": "NovelForge-${version}.exe"
+      "icon": "public/favicon.ico",
+      "signAndEditExecutable": false
     }
   },
   "dependencies": {
