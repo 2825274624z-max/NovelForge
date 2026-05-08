@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { countWords } from "@/lib/word-count";
@@ -78,6 +79,7 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
     const [shortcutOpen, setShortcutOpen] = useState(false);
     const [clientReady, setClientReady] = useState(false);
     const pauseRef = useRef<NodeJS.Timeout | null>(null);
+    const kbBtnRef = useRef<HTMLButtonElement | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => { setClientReady(true); }, []);
@@ -183,23 +185,30 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
         <div className="flex-1" />
         <span className="text-[10px] text-muted-foreground tabular-nums mr-1">{wc.toLocaleString()} 字</span>
         {onSave && <TB tip="保存 · Ctrl+S" onClick={onSave}><Save className="w-3.5 h-3.5" /></TB>}
-        <div className="relative">
-          <TB tip="快捷键" onClick={() => setShortcutOpen((v) => !v)} active={shortcutOpen}><Keyboard className="w-3.5 h-3.5" /></TB>
-          {shortcutOpen && (
-            <div ref={panelRef} className="absolute right-0 top-full mt-1 z-30 w-56 rounded-lg border bg-popover shadow-xl p-3 animate-in fade-in zoom-in-95 duration-150">
-              <div className="text-[11px] font-semibold mb-2">键盘快捷键</div>
-              <div className="space-y-1 text-[11px]">
-                {[
-                  ["Ctrl+S", "保存"], ["Ctrl+N", "新建章节"], ["Ctrl+Shift+A", "AI 面板"],
-                  ["Ctrl+B", "粗体"], ["Ctrl+I", "斜体"], ["Ctrl+Z", "撤销"],
-                  ["Ctrl+Shift+Z", "重做"], ["Tab", "采纳续写"],
-                ].map(([k, d]) => (
-                  <div key={k} className="flex justify-between"><span className="text-muted-foreground">{d}</span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono border">{k}</kbd></div>
-                ))}
-              </div>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button type="button" ref={kbBtnRef}
+                onClick={() => setShortcutOpen((v) => !v)}
+                className={cn("p-1.5 rounded hover:bg-muted transition-all duration-150 hover:scale-110 active:scale-90", shortcutOpen && "bg-muted text-primary shadow-sm")}>
+                <Keyboard className="w-3.5 h-3.5" />
+              </button>
+            }
+          />
+          <TooltipContent>快捷键</TooltipContent>
+        </Tooltip>
+        {shortcutOpen && createPortal(
+          <div ref={panelRef} className="fixed z-[60] w-56 rounded-lg border bg-popover shadow-xl p-3 animate-in fade-in zoom-in-95 duration-150"
+            style={{ top: (kbBtnRef.current?.getBoundingClientRect().bottom ?? 0) + 6, right: window.innerWidth - (kbBtnRef.current?.getBoundingClientRect().right ?? 0) }}>
+            <div className="text-[11px] font-semibold mb-2">键盘快捷键</div>
+            <div className="space-y-1 text-[11px]">
+              {[["Ctrl+S", "保存"], ["Ctrl+N", "新建章节"], ["Ctrl+Shift+A", "AI 面板"], ["Ctrl+B", "粗体"], ["Ctrl+I", "斜体"], ["Ctrl+Z", "撤销"], ["Ctrl+Shift+Z", "重做"], ["Tab", "采纳续写"]].map(([k, d]) => (
+                <div key={k} className="flex justify-between"><span className="text-muted-foreground">{d}</span><kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px] font-mono border">{k}</kbd></div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>,
+          document.body
+        )}
         <TB tip={focusMode ? "退出专注" : "专注模式"} onClick={() => setFocusMode(!focusMode)} active={focusMode}>
           {focusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
         </TB>

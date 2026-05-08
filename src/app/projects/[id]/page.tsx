@@ -11,7 +11,7 @@ import { countWords } from "@/lib/word-count";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { FileText, Plus, Trash2, Sparkles, Users, Globe, Eye, ArrowLeft, Settings, Download, MapPin, Building2, Package, Clock, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
+import { FileText, Plus, Trash2, Sparkles, Users, Globe, Eye, ArrowLeft, Settings, Download, MapPin, Building2, Package, Clock, PanelRightClose, PanelRightOpen, ChevronDown, ChevronRight, BarChart3, Search, FileSearch } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StatsPanel } from "@/components/stats-panel";
@@ -215,6 +215,52 @@ export default function ProjectPage() {
 
   const handleDeleteChapter = async (chId: string) => { await deleteChapter(chId); toast.success("章节已删除"); };
 
+  // P1: 生成章节摘要
+  const [summarizingId, setSummarizingId] = useState<string | null>(null);
+  const handleSummarizeChapter = async (chId: string) => {
+    setSummarizingId(chId);
+    try {
+    const ch = chapters.find((c) => c.id === chId);
+      const content = chId === currentChapterId ? (editorRef.current?.getText() || "") : "";
+      const res = await fetch("/api/ai", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: aiSettings.provider, model: aiSettings.model, baseUrl: aiSettings.baseUrl, apiKey: aiSettings.apiKey,
+          temperature: 0.3, maxTokens: 600, workflow: "summary",
+          message: `请为以下章节生成200字以内的摘要：\n标题：${ch?.title || "无标题"}\n${content ? `内容片段：${content.slice(0, 2000)}` : ""}`,
+          context: `作品：${projectForm.title}\n简介：${projectForm.description}`,
+        }),
+      });
+      if (!res.ok) throw new Error("生成失败");
+      const summary = await res.text();
+      await fetch(`/api/chapters?id=${chId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ summary: summary.trim() }) });
+      toast.success("摘要已生成");
+    } catch { toast.error("摘要生成失败"); }
+    setSummarizingId(null);
+  };
+
+  // P1: 一致性检查
+  const [checking, setChecking] = useState(false);
+  const handleConsistencyCheck = async () => {
+    setChecking(true);
+    try {
+      const titles = chapters.map((c) => `- ${c.title}（${c.wordCount} 字）${c.summary ? ` | ${c.summary.slice(0, 60)}...` : ""}`).join("\n");
+      const res = await fetch("/api/ai", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: aiSettings.provider, model: aiSettings.model, baseUrl: aiSettings.baseUrl, apiKey: aiSettings.apiKey,
+          temperature: 0.3, maxTokens: 2000, workflow: "consistency",
+          message: `请检查以下作品的情节一致性：\n\n## 作品信息\n标题：${projectForm.title}\n简介：${projectForm.description}\n大纲：${projectData?.outline || "暂无"}\n\n## 章节列表\n${titles}`,
+          context: `作品：${projectForm.title}\n完整简介：${projectForm.description}\n大纲：${projectData?.outline || ""}\n世界观：${projectForm.worldView}`,
+        }),
+      });
+      if (!res.ok) throw new Error("检查失败");
+      const result = await res.text();
+      toast.success("一致性检查完成", { description: result.slice(0, 200) + "..." });
+    } catch { toast.error("一致性检查失败"); }
+    setChecking(false);
+  };
+
   // 大纲操作
   const handleSaveOutline = async (outline: string) => {
     await updateProject.mutateAsync({ id: projectId, outline });
@@ -250,6 +296,7 @@ export default function ProjectPage() {
         <div className="flex-1" />
         {saving && <span className="text-[9px] sm:text-[10px] text-muted-foreground/60 animate-breathe">保存中</span>}
         <IconBtn onClick={() => setPanels((p) => ({ ...p, stats: true }))} icon={BarChart3} tip="写作统计" />
+        <IconBtn onClick={handleConsistencyCheck} icon={FileSearch} tip={`一致性检查${checking ? "中..." : ""}`} />
         <IconBtn onClick={() => handleExport("md")} icon={Download} tip="导出 MD" />
         <IconBtn onClick={() => setPanels((p) => ({ ...p, settings: true }))} icon={Settings} tip="作品设置" />
         <ThemeToggle />
@@ -274,6 +321,9 @@ export default function ProjectPage() {
                       <span className="text-[9px] sm:text-[10px] font-mono text-muted-foreground w-4 text-right shrink-0">{i + 1}</span>
                       <span className="text-[11px] sm:text-[12px] lg:text-[13px] truncate flex-1">{ch.title || "未命名"}</span>
                       <span className="text-[8px] sm:text-[9px] text-muted-foreground/40 shrink-0">{ch.wordCount}</span>
+                      <button className="opacity-0 group-hover:opacity-100 text-muted-foreground/50 hover:text-primary shrink-0" onClick={(e) => { e.stopPropagation(); handleSummarizeChapter(ch.id); }} title="生成摘要">
+                        {summarizingId === ch.id ? <span className="w-2.5 h-2.5 border border-primary/30 rounded-full animate-spin border-t-primary" /> : <FileSearch className="w-2.5 h-2.5" />}
+                      </button>
                       <button className="opacity-0 group-hover:opacity-100 text-destructive/50 hover:text-destructive shrink-0" onClick={(e) => { e.stopPropagation(); handleDeleteChapter(ch.id); }}>
                         <Trash2 className="w-2.5 h-2.5" />
                       </button>
