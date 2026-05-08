@@ -127,8 +127,14 @@ export function useAIGeneration({
     const controller = new AbortController(); abortRef.current = controller;
     try {
       const ctx = buildContext();
-      const needsContent = ["polish", "expand", "shorten", "rewrite", "consistency"].includes(workflow);
-      const curContent = needsContent ? (editorRef.current?.getText() || "") : "";
+      // 文本处理类工作流：必须选中文字
+      const needsSelection = ["polish", "expand", "shorten", "rewrite"].includes(workflow);
+      let curContent = "";
+      if (needsSelection) {
+        const sel = editorRef.current?.getSelection();
+        if (!sel || !sel.text.trim()) { toast.error("请先在编辑器中选中要处理的文字"); setGenerating(false); return; }
+        curContent = sel.text;
+      }
       const msg = curContent ? `${aiMessage}\n\n---\n${curContent}` : aiMessage;
       const res = await fetch("/api/ai", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -144,7 +150,7 @@ export function useAIGeneration({
       while (true) { const { done, value } = await reader.read(); if (done) break; result += decoder.decode(value, { stream: true }); setStreamingContent(result); }
 
       if (["draft", "continue"].includes(workflow)) editorRef.current?.appendText(result);
-      else if (["polish", "expand", "shorten", "rewrite"].includes(workflow)) editorRef.current?.replaceContent(toHtml(result));
+      else if (["polish", "expand", "shorten", "rewrite"].includes(workflow)) editorRef.current?.replaceSelection(toHtml(result));
 
       fetch("/api/ai/generations", {
         method: "POST", headers: { "Content-Type": "application/json" },

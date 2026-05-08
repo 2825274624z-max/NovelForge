@@ -15,10 +15,10 @@ import { estimateTokens, formatTokens } from "@/lib/token-count";
 const WORKFLOW_CHIPS = [
   { value: "draft", label: "生成章节", desc: "根据设定生成新章节", icon: "📝" },
   { value: "continue", label: "续写", desc: "从当前位置接着写", icon: "➡️" },
-  { value: "polish", label: "润色", desc: "优化表达和语法", icon: "✨" },
-  { value: "expand", label: "扩写", desc: "丰富细节和描写", icon: "📖" },
-  { value: "shorten", label: "缩写", desc: "精简冗余表达", icon: "✂️" },
-  { value: "rewrite", label: "风格改写", desc: "变换写作风格", icon: "🔄" },
+  { value: "polish", label: "润色", desc: "选中文字 → 优化表达", icon: "✨" },
+  { value: "expand", label: "扩写", desc: "选中文字 → 丰富细节", icon: "📖" },
+  { value: "shorten", label: "缩写", desc: "选中文字 → 精简表达", icon: "✂️" },
+  { value: "rewrite", label: "风格改写", desc: "选中文字 → 变换风格", icon: "🔄" },
 ];
 
 const AI_ASSET_OPTS = [
@@ -113,8 +113,10 @@ export function AIPanel({
             <Textarea
               className="h-20 text-[13px] resize-none"
               placeholder={
-                workflow === "polish" ? "你想怎么润色？不填则默认优化..."
-                : workflow === "rewrite" ? "目标风格，如：用王小波的风格改写..."
+                workflow === "polish" ? "选中文字后点击生成 → 润色选中内容"
+                : workflow === "rewrite" ? "选中文字后输入目标风格 → 改写选中内容"
+                : workflow === "expand" ? "选中文字后点击生成 → 扩写选中内容"
+                : workflow === "shorten" ? "选中文字后点击生成 → 缩写选中内容"
                 : workflow === "continue" ? "续写方向，如：主角发现了密室..."
                 : workflow === "draft" ? "描述你要写的内容，如：主角深夜潜入研究所..."
                 : "输入你的指令..."

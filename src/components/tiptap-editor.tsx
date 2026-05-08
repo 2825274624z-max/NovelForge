@@ -42,8 +42,10 @@ export interface TiptapEditorHandle {
   insertContent: (html: string) => void;
   appendText: (text: string) => void;
   replaceContent: (html: string) => void;
+  replaceSelection: (html: string) => void;
   getHTML: () => string;
   getText: () => string;
+  getSelection: () => { text: string; from: number; to: number } | null;
   focus: () => void;
 }
 
@@ -147,8 +149,19 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
         editor?.commands.insertContentAt(pos, toHtml(t));
       },
       replaceContent: (c: string) => editor?.commands.setContent(toHtml(c)),
+      replaceSelection: (html: string) => {
+        if (!editor) return;
+        const { from, to } = editor.state.selection;
+        editor.chain().focus().deleteRange({ from, to }).insertContent(html).run();
+      },
       getHTML: () => editor?.getHTML() || "",
       getText: () => editor?.getText() || "",
+      getSelection: () => {
+        if (!editor) return null;
+        const { from, to, empty } = editor.state.selection;
+        if (empty) return null;
+        return { text: editor.state.doc.textBetween(from, to), from, to };
+      },
       focus: () => editor?.commands.focus(),
     }), [editor]);
 

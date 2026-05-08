@@ -149,11 +149,34 @@ export default function ProjectPage() {
     if (lastDate.current !== today) lastDate.current = today;
   }, [projectId, trackWords]);
 
+  // 自动摘要：保存完成后若章节无摘要则后台生成
+  const autoSummaryBusy = useRef(false);
   const prevSaving = useRef(false);
   useEffect(() => {
-    if (prevSaving.current && !saving) trackDelta();
+    if (prevSaving.current && !saving) {
+      trackDelta();
+      const cur = chapters.find((c) => c.id === currentChapterId);
+      if (cur && !cur.summary && cur.wordCount > 200 && !autoSummaryBusy.current && currentChapterId && aiSettings.provider) {
+        autoSummaryBusy.current = true;
+        const chId = currentChapterId;
+        fetch("/api/ai", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: aiSettings.provider, model: aiSettings.model, baseUrl: aiSettings.baseUrl, apiKey: aiSettings.apiKey,
+            temperature: 0.3, maxTokens: 500, workflow: "summary",
+            message: `请为以下章节生成200字以内的摘要：\n标题：${chapterTitle}\n内容：${chapterContent.slice(0, 2500)}`,
+            context: `作品：${projectForm.title}\n简介：${projectForm.description}`,
+          }),
+        }).then(async (res) => {
+          if (res.ok) {
+            const summary = await res.text();
+            await fetch(`/api/chapters?id=${chId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ summary: summary.trim() }) });
+          }
+        }).catch(() => {}).finally(() => { autoSummaryBusy.current = false; });
+      }
+    }
     prevSaving.current = saving;
-  }, [saving, trackDelta]);
+  }, [saving, trackDelta, chapters, currentChapterId, chapterContent, chapterTitle, aiSettings, projectForm]);
 
   // ─── Handlers ───
   const handleSave = useCallback(() => { if (currentChapterId) { saveChapter(currentChapterId); toast.success("已保存"); } }, [currentChapterId, saveChapter]);
