@@ -105,9 +105,12 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
     const [focusMode, setFocusMode] = useState(false);
     const [shortcutOpen, setShortcutOpen] = useState(false);
     const [shortcutAnchor, setShortcutAnchor] = useState<HTMLElement | null>(null);
+    const [clientReady, setClientReady] = useState(false);
     const toolbarRef = useRef<HTMLDivElement | null>(null);
     const kbBtnRef = useRef<HTMLButtonElement | null>(null);
     const pauseTimer = useRef<NodeJS.Timeout | null>(null);
+
+    useEffect(() => { setClientReady(true); }, []);
 
     const editor = useEditor({
       extensions: [
@@ -201,7 +204,8 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
       focus: () => editor?.commands.focus(),
     }), [editor]);
 
-    if (!editor) {
+    // 等待客户端挂载和编辑器初始化完成后再渲染工具栏
+    if (!clientReady || !editor) {
       return <div className="h-full bg-muted/10 animate-pulse rounded" />;
     }
 
