@@ -10,6 +10,7 @@ interface Props {
   saving: boolean;
   onTitleChange: (v: string) => void;
   onContentChange: (html: string) => void;
+  onSave: () => void;
   editorRef: React.RefObject<TiptapEditorHandle | null>;
   suggestion?: string | null;
   onAcceptSuggestion?: () => void;
@@ -24,6 +25,7 @@ export function EditorPanel({
   saving,
   onTitleChange,
   onContentChange,
+  onSave,
   editorRef,
   suggestion,
   onAcceptSuggestion,
@@ -48,6 +50,7 @@ export function EditorPanel({
         initialContent={chapterContent}
         placeholder="开始写作..."
         onChange={(html) => onContentChange(html)}
+        onSave={onSave}
         suggestion={suggestion}
         onAcceptSuggestion={onAcceptSuggestion}
         onDismissSuggestion={onDismissSuggestion}

@@ -242,6 +242,14 @@ export default function ProjectPage() {
     prevSaving.current = saving;
   }, [saving, trackWordDelta]);
 
+  // ─── Save ───
+  const handleSave = useCallback(() => {
+    if (currentChapterId) {
+      saveChapter(currentChapterId);
+      toast.success("已保存");
+    }
+  }, [currentChapterId, saveChapter]);
+
   // ─── Asset operations ───
   const handleAddAsset = async (type: AssetType) => {
     const defaults: Record<AssetType, Record<string, string>> = {
@@ -479,6 +487,7 @@ export default function ProjectPage() {
           saving={saving}
           onTitleChange={setChapterTitle}
           onContentChange={setChapterContent}
+          onSave={handleSave}
           editorRef={editorRef}
           suggestion={suggestion}
           onAcceptSuggestion={handleAcceptSuggestion}

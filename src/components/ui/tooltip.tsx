@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import { cn } from "@/lib/utils"
@@ -21,8 +22,20 @@ function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+function TooltipTrigger({ children, render, ...props }: TooltipPrimitive.Trigger.Props) {
+  // 自动将单个 ReactElement 子节点转为 render prop，避免 <button> 嵌套 <button>
+  const child =
+    !render && React.Children.count(children) === 1 && React.isValidElement(children)
+      ? children
+      : undefined
+
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      render={render ?? child}
+      {...props}
+    />
+  )
 }
 
 function TooltipContent({

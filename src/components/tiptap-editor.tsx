@@ -9,6 +9,7 @@ import {
   useState,
   useEffect,
   useRef,
+  useCallback,
 } from "react";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -17,7 +18,7 @@ import {
 import {
   Bold, Italic, Strikethrough, Heading1, Heading2, Heading3,
   Quote, List, ListOrdered, Minus, Undo2, Redo2,
-  Maximize2, Minimize2, Sparkles,
+  Maximize2, Minimize2, Sparkles, Save, Keyboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { countWords } from "@/lib/word-count";
@@ -58,7 +59,7 @@ function TBBtn({
   if (!tooltip) return btn;
   return (
     <Tooltip>
-      <TooltipTrigger>{btn}</TooltipTrigger>
+      <TooltipTrigger render={btn} />
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   );
@@ -70,6 +71,7 @@ interface TiptapEditorProps {
   placeholder?: string;
   editable?: boolean;
   onChange?: (html: string, text: string) => void;
+  onSave?: () => void;
   className?: string;
   suggestion?: string | null;
   onAcceptSuggestion?: () => void;
@@ -86,13 +88,29 @@ export interface TiptapEditorHandle {
   focus: () => void;
 }
 
+const SHORTCUTS: { keys: string; desc: string }[] = [
+  { keys: "Ctrl+S", desc: "保存当前章节" },
+  { keys: "Ctrl+N", desc: "新建章节" },
+  { keys: "Ctrl+Shift+A", desc: "切换 AI 面板" },
+  { keys: "Ctrl+B", desc: "粗体" },
+  { keys: "Ctrl+I", desc: "斜体" },
+  { keys: "Ctrl+Z", desc: "撤销" },
+  { keys: "Ctrl+Shift+Z", desc: "重做" },
+  { keys: "Tab", desc: "采纳 AI 续写建议" },
+];
+
 export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
   function TiptapEditor(
-    { initialContent, placeholder, editable = true, onChange, className, suggestion, onAcceptSuggestion, onDismissSuggestion, onPause },
+    { initialContent, placeholder, editable = true, onChange, onSave, className, suggestion, onAcceptSuggestion, onDismissSuggestion, onPause },
     ref
   ) {
     const [focusMode, setFocusMode] = useState(false);
+    const [shortcutOpen, setShortcutOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const pauseTimer = useRef<NodeJS.Timeout | null>(null);
+
+    // 确保编辑器仅在客户端挂载后才能交互
+    useEffect(() => { setMounted(true); }, []);
 
     const editor = useEditor({
       extensions: [
@@ -104,7 +122,6 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
       immediatelyRender: false,
       onUpdate: ({ editor: ed }) => {
         onChange?.(ed.getHTML(), ed.getText());
-        // Debounced inline AI suggestion
         if (pauseTimer.current) clearTimeout(pauseTimer.current);
         if (onPause) {
           pauseTimer.current = setTimeout(() => {
@@ -157,7 +174,7 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
       return () => window.removeEventListener("keydown", onKey);
     }, [focusMode, editor]);
 
-    // Focus mode: set editor content area reference
+    // Focus mode: focus editor
     useEffect(() => {
       if (!focusMode || !editor) return;
       editor.commands.focus();
@@ -180,6 +197,11 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
       focus: () => editor?.commands.focus(),
     }), [editor]);
 
+    // ─── Safe command wrapper (guards against editor not ready) ───
+    const exec = useCallback((fn: () => void) => {
+      if (editor && !editor.isDestroyed && mounted) fn();
+    }, [editor, mounted]);
+
     // ─── Word count ───
     const wordCount = editor ? countWords(editor.getText()) : 0;
 
@@ -187,60 +209,99 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
     const toolbar = (
       <TooltipProvider delay={400}>
         <div className="flex items-center gap-0.5">
-          <TBBtn tooltip="粗体" onClick={() => editor?.chain().focus().toggleBold().run()} active={editor?.isActive("bold")}>
+          <TBBtn tooltip="粗体 · Ctrl+B" onClick={() => exec(() => editor?.chain().focus().toggleBold().run())} active={editor?.isActive("bold")}>
             <Bold className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="斜体" onClick={() => editor?.chain().focus().toggleItalic().run()} active={editor?.isActive("italic")}>
+          <TBBtn tooltip="斜体 · Ctrl+I" onClick={() => exec(() => editor?.chain().focus().toggleItalic().run())} active={editor?.isActive("italic")}>
             <Italic className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="删除线" onClick={() => editor?.chain().focus().toggleStrike().run()} active={editor?.isActive("strike")}>
+          <TBBtn tooltip="删除线" onClick={() => exec(() => editor?.chain().focus().toggleStrike().run())} active={editor?.isActive("strike")}>
             <Strikethrough className="w-3.5 h-3.5" />
           </TBBtn>
         </div>
         <Separator orientation="vertical" className="h-4" />
         <div className="flex items-center gap-0.5">
-          <TBBtn tooltip="标题 1" onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} active={editor?.isActive("heading", { level: 1 })}>
+          <TBBtn tooltip="标题 1" onClick={() => exec(() => editor?.chain().focus().toggleHeading({ level: 1 }).run())} active={editor?.isActive("heading", { level: 1 })}>
             <Heading1 className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="标题 2" onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} active={editor?.isActive("heading", { level: 2 })}>
+          <TBBtn tooltip="标题 2" onClick={() => exec(() => editor?.chain().focus().toggleHeading({ level: 2 }).run())} active={editor?.isActive("heading", { level: 2 })}>
             <Heading2 className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="标题 3" onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} active={editor?.isActive("heading", { level: 3 })}>
+          <TBBtn tooltip="标题 3" onClick={() => exec(() => editor?.chain().focus().toggleHeading({ level: 3 }).run())} active={editor?.isActive("heading", { level: 3 })}>
             <Heading3 className="w-3.5 h-3.5" />
           </TBBtn>
         </div>
         <Separator orientation="vertical" className="h-4" />
         <div className="flex items-center gap-0.5">
-          <TBBtn tooltip="引用块" onClick={() => editor?.chain().focus().toggleBlockquote().run()} active={editor?.isActive("blockquote")}>
+          <TBBtn tooltip="引用块" onClick={() => exec(() => editor?.chain().focus().toggleBlockquote().run())} active={editor?.isActive("blockquote")}>
             <Quote className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="无序列表" onClick={() => editor?.chain().focus().toggleBulletList().run()} active={editor?.isActive("bulletList")}>
+          <TBBtn tooltip="无序列表" onClick={() => exec(() => editor?.chain().focus().toggleBulletList().run())} active={editor?.isActive("bulletList")}>
             <List className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="有序列表" onClick={() => editor?.chain().focus().toggleOrderedList().run()} active={editor?.isActive("orderedList")}>
+          <TBBtn tooltip="有序列表" onClick={() => exec(() => editor?.chain().focus().toggleOrderedList().run())} active={editor?.isActive("orderedList")}>
             <ListOrdered className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="分割线" onClick={() => editor?.chain().focus().setHorizontalRule().run()}>
+          <TBBtn tooltip="分割线" onClick={() => exec(() => editor?.chain().focus().setHorizontalRule().run())}>
             <Minus className="w-3.5 h-3.5" />
           </TBBtn>
         </div>
         <Separator orientation="vertical" className="h-4" />
         <div className="flex items-center gap-0.5">
-          <TBBtn tooltip="撤销" onClick={() => editor?.chain().focus().undo().run()} disabled={!editor?.can().undo()}>
+          <TBBtn tooltip="撤销 · Ctrl+Z" onClick={() => exec(() => editor?.chain().focus().undo().run())} disabled={!editor?.can().undo()}>
             <Undo2 className="w-3.5 h-3.5" />
           </TBBtn>
-          <TBBtn tooltip="重做" onClick={() => editor?.chain().focus().redo().run()} disabled={!editor?.can().redo()}>
+          <TBBtn tooltip="重做 · Ctrl+Shift+Z" onClick={() => exec(() => editor?.chain().focus().redo().run())} disabled={!editor?.can().redo()}>
             <Redo2 className="w-3.5 h-3.5" />
           </TBBtn>
         </div>
         <div className="flex-1" />
-        <span className="text-[10px] text-muted-foreground tabular-nums mr-2">
+        <span className="text-[10px] text-muted-foreground tabular-nums mr-1">
           {wordCount.toLocaleString()} 字
         </span>
+        {/* 保存按钮 */}
+        {onSave && (
+          <TBBtn tooltip="保存 · Ctrl+S" onClick={onSave}>
+            <Save className="w-3.5 h-3.5" />
+          </TBBtn>
+        )}
+        {/* 快捷键帮助 */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={() => setShortcutOpen(!shortcutOpen)}
+                className={cn(
+                  "p-1.5 rounded hover:bg-muted transition-all duration-150 hover:scale-110 active:scale-90",
+                  shortcutOpen && "bg-muted text-primary shadow-sm"
+                )}
+              >
+                <Keyboard className="w-3.5 h-3.5" />
+              </button>
+            }
+          />
+          <TooltipContent>快捷键</TooltipContent>
+        </Tooltip>
         <TBBtn tooltip={focusMode ? "退出专注模式" : "专注模式"} onClick={() => setFocusMode(!focusMode)} active={focusMode}>
           {focusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
         </TBBtn>
       </TooltipProvider>
+    );
+
+    // ─── 快捷键帮助面板 ───
+    const shortcutPanel = shortcutOpen && (
+      <div className="absolute right-0 top-full mt-1 z-30 w-56 rounded-lg border bg-popover shadow-xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="text-[11px] font-semibold mb-2 text-foreground">键盘快捷键</div>
+        <div className="space-y-1">
+          {SHORTCUTS.map((s) => (
+            <div key={s.keys} className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">{s.desc}</span>
+              <kbd className="px-1.5 py-0.5 rounded-md bg-muted text-[10px] font-mono font-medium text-foreground/70 border border-border/50">{s.keys}</kbd>
+            </div>
+          ))}
+        </div>
+      </div>
     );
 
     if (!editor) {
@@ -250,8 +311,9 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
     const editorBody = (
       <>
         {/* Fixed toolbar */}
-        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 bg-background/80 backdrop-blur-sm shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border/30 bg-background/80 backdrop-blur-sm shrink-0 overflow-x-auto relative">
           {toolbar}
+          {shortcutPanel}
         </div>
 
         {/* Editor content */}
@@ -290,13 +352,11 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
     if (focusMode) {
       return (
         <div className="fixed inset-0 z-50 flex flex-col bg-background animate-scale-in">
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-          {/* Minimal toolbar */}
           <div className="relative flex items-center gap-1 px-4 py-1.5 border-b border-border/20 overflow-x-auto glass">
             {toolbar}
+            {shortcutPanel}
           </div>
-          {/* Centered editor */}
           <div className="relative flex-1 overflow-auto flex justify-center scroll-thin">
             <div className="w-full max-w-3xl animate-float-in">
               <EditorContent
@@ -305,7 +365,6 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
               />
             </div>
           </div>
-          {/* Hint */}
           <div className="relative bottom-6 left-1/2 -translate-x-1/2 text-[11px] text-muted-foreground/30 select-none animate-breathe">
             专注模式 · Esc 退出 · {wordCount.toLocaleString()} 字
           </div>
