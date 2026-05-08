@@ -10,8 +10,8 @@ export async function POST(req: Request) {
     const { provider, model, baseUrl, apiKey, temperature, maxTokens, topP, frequencyPenalty, presencePenalty, reasoningEffort, workflow, message, context } = body;
 
     const config: AIProviderConfig = {
-      provider: provider || "openai", model: model || "gpt-4o",
-      baseUrl: baseUrl || "", apiKey: apiKey || "",
+      provider: provider || "deepseek", model: model || "deepseek-v4-flash",
+      baseUrl: baseUrl || "https://api.deepseek.com", apiKey: apiKey || "",
       temperature: temperature || 0.7, maxTokens: maxTokens || 8192,
       topP, frequencyPenalty, presencePenalty, reasoningEffort,
     };

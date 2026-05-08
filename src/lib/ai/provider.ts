@@ -49,7 +49,7 @@ const ENV_KEYS: Record<ProviderType, string> = {
 
 const DEFAULT_BASE_URLS: Record<ProviderType, string> = {
   openai: "https://api.openai.com/v1", anthropic: "https://api.anthropic.com/v1",
-  gemini: "https://generativelanguage.googleapis.com/v1beta", deepseek: "https://api.deepseek.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta", deepseek: "https://api.deepseek.com",
   openrouter: "https://openrouter.ai/api/v1", ollama: "http://localhost:11434/v1",
 };
 

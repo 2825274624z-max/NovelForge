@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   Plus, Pencil, Trash2, Check, Users, Globe, MapPin,
-  Building2, Package, Eye, Clock, FileText,
+  Building2, Package, Eye, Clock, FileText, Sparkles, Loader2,
 } from "lucide-react";
 import {
   Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
@@ -107,15 +107,20 @@ interface Props {
   onAdd: (type: AssetType) => void;
   onSave: (type: AssetType, id: string, data: Record<string, unknown>) => void;
   onDelete: (type: AssetType, id: string) => void;
+  onGenerateAssetCard?: (chapterIds: string[], assetTypes: string[]) => void;
+  generatingAssets?: boolean;
 }
 
 export function AssetSheet({
   open, activeType, onOpenChange, onTypeChange,
   items, chapters, organizations, characters,
   onAdd, onSave, onDelete,
+  onGenerateAssetCard, generatingAssets,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<AssetEntry>({});
+  const [showAIGen, setShowAIGen] = useState(false);
+  const [selectedChapters, setSelectedChapters] = useState<Set<string>>(new Set());
   const Icon = ICONS[activeType];
   const nameKey = NAME_KEYS[activeType];
   const fields = FIELDS[activeType];
@@ -164,13 +169,62 @@ export function AssetSheet({
         </SheetHeader>
 
         {/* Add button */}
-        <div className="px-4 py-2 border-b">
+        <div className="px-4 py-2 border-b space-y-1.5">
           <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => onAdd(activeType)}>
             <Plus className="w-3 h-3 mr-1" />新建{LABELS[activeType]}
           </Button>
+          {onGenerateAssetCard && (
+            <>
+              <Button
+                variant="ghost" size="sm"
+                className="w-full text-xs"
+                onClick={() => setShowAIGen(!showAIGen)}
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                {showAIGen ? "收起" : "从章节生成资产卡片"}
+              </Button>
+              {showAIGen && (
+                <div className="space-y-2 p-2 bg-muted/20 rounded-md animate-in fade-in">
+                  <p className="text-[10px] text-muted-foreground">选择章节，AI 将提取角色/世界观/地点等资产：</p>
+                  <div className="max-h-32 overflow-y-auto space-y-0.5">
+                    {chapters.map((ch) => (
+                      <label key={ch.id} className="flex items-center gap-1.5 text-[11px] cursor-pointer hover:bg-muted/30 rounded px-1 py-0.5">
+                        <input
+                          type="checkbox"
+                          className="w-3 h-3"
+                          checked={selectedChapters.has(ch.id)}
+                          onChange={(e) => {
+                            const next = new Set(selectedChapters);
+                            e.target.checked ? next.add(ch.id) : next.delete(ch.id);
+                            setSelectedChapters(next);
+                          }}
+                        />
+                        {ch.title || "未命名"}
+                      </label>
+                    ))}
+                  </div>
+                  <Button
+                    size="sm" className="w-full text-xs h-7"
+                    disabled={selectedChapters.size === 0 || generatingAssets}
+                    onClick={() => {
+                      const assetTypes = ["character", "world", "location", "item", "fore"];
+                      onGenerateAssetCard(Array.from(selectedChapters), assetTypes);
+                    }}
+                  >
+                    {generatingAssets ? (
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3 h-3 mr-1" />
+                    )}
+                    {generatingAssets ? "生成中..." : "开始生成"}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="p-3 space-y-2">
             {items.map((item) => {
               const isEdit = editingId === item.id;

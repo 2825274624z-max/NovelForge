@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useAIStore } from "@/store/useStore";
 import { estimateTokens, truncateByTokens, formatTokens } from "@/lib/token-count";
 import type { TiptapEditorHandle } from "@/components/tiptap-editor";
@@ -16,7 +16,7 @@ interface UseAIGenerationParams {
     fores: Record<string, string>[];
     timelines: Record<string, string>[];
   };
-  chapters: { id: string; title: string; summary: string; wordCount: number }[];
+  chapters: { id: string; title: string; summary: string; wordCount: number; order: number }[];
   currentChapterId: string | null;
   currentChapterContent: string;
   projectOutline: string;
@@ -59,8 +59,9 @@ export function useAIGeneration({
 
     // 2. 章节记忆（分层：近3章全文 + 前N章摘要）
     if (chapters.length > 0) {
-      const sorted = [...chapters].sort((a, b) => (b.wordCount || 0) - (a.wordCount || 0) || 0);
-      const recent = sorted.filter((c) => c.id !== currentChapterId).slice(0, 3);
+      // 按章节 order 排序（最新写的排在后面）
+      const sorted = [...chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const recent = sorted.filter((c) => c.id !== currentChapterId).slice(-3);
       const earlier = sorted.filter((c) => c.id !== currentChapterId && !recent.find((r) => r.id === c.id));
 
       // 近 3 章摘要（如果是当前章节，使用编辑器内容）
@@ -118,8 +119,9 @@ export function useAIGeneration({
     return truncateByTokens(raw, tokenBudget);
   }, [projectForm, aiSettings.maxTokens, aiAssets, assets, aiContext, chapters, currentChapterId, currentChapterContent, projectOutline]);
 
-  const contextTokenCount = estimateTokens(buildContext());
-  const contextPreview = buildContext().slice(0, 300) + (buildContext().length > 300 ? "…" : "");
+  const contextCache = useMemo(() => buildContext(), [buildContext]);
+  const contextTokenCount = estimateTokens(contextCache);
+  const contextPreview = contextCache.slice(0, 300) + (contextCache.length > 300 ? "…" : "");
 
   // 切换工作流时捕获选区（在焦点丢失前）
   const handleWorkflowChange = useCallback((v: string) => {
@@ -134,7 +136,23 @@ export function useAIGeneration({
     setGenerating(true); setStreamingContent(""); setError(null);
     const controller = new AbortController(); abortRef.current = controller;
     try {
-      const ctx = buildContext();
+      let ctx = buildContext();
+
+      // 获取记忆系统上下文（仅创作类工作流需要）
+      if (["draft", "continue", "outline"].includes(workflow) && projectId && currentChapterId) {
+        try {
+          const currentCh = chapters.find((c) => c.id === currentChapterId);
+          const chapterNum = currentCh?.order ?? chapters.length + 1;
+          const memRes = await fetch(`/api/memory/context?projectId=${projectId}&chapterNum=${chapterNum}`);
+          if (memRes.ok) {
+            const mem = await memRes.json();
+            if (mem.systemContext) {
+              ctx = `【记忆系统上下文】\n${mem.systemContext}\n\n【项目上下文】\n${ctx}`;
+            }
+          }
+        } catch { /* 记忆系统不可用时不阻断 */ }
+      }
+
       // 文本处理类工作流：有选中→处理选中，无选中→处理全文
       let curContent = "";
       if (needsSelection) {
@@ -178,7 +196,25 @@ export function useAIGeneration({
   }, [aiMessage, workflow, aiSettings, currentChapterId, projectId, buildContext, setGenerating, setStreamingContent, setError, editorRef]);
 
   const handleCancel = useCallback(() => { abortRef.current?.abort(); abortRef.current = null; }, []);
-  const handleInsert = useCallback(() => { editorRef.current?.appendText(streamingContent); toast.success("已插入正文"); }, [streamingContent, editorRef]);
+
+  const handleInsert = useCallback(() => {
+    if (["polish", "expand", "shorten", "rewrite"].includes(workflow)) {
+      // 文本处理类工作流：替换选中区域
+      const sel = editorRef.current?.getSelection();
+      if (sel?.text.trim()) {
+        editorRef.current?.replaceSelection(toHtml(streamingContent));
+        toast.success("已替换选中内容");
+      } else {
+        editorRef.current?.replaceContent(toHtml(streamingContent));
+        toast.success("已替换全文");
+      }
+    } else {
+      // 生成/续写类工作流：插入到光标处
+      editorRef.current?.appendText(streamingContent);
+      toast.success("已插入正文");
+    }
+  }, [streamingContent, workflow, editorRef]);
+
   const handleRetry = useCallback(() => { setStreamingContent(""); handleGenerate(); }, [setStreamingContent, handleGenerate]);
 
   return {

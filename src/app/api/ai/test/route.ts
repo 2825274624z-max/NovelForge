@@ -6,9 +6,14 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { provider, model, baseUrl, apiKey } = body;
 
+    if (!provider) return NextResponse.json({ success: false, message: "请选择 AI Provider" });
+    if (!apiKey && !process.env[`${provider.toUpperCase()}_API_KEY`]) {
+      return NextResponse.json({ success: false, message: "请填写 API Key 或在 .env 中配置" });
+    }
+
     const config: AIProviderConfig = {
-      provider: provider || "openai",
-      model: model || "gpt-4o",
+      provider: provider || "deepseek",
+      model: model || "deepseek-v4-flash",
       baseUrl: baseUrl || "",
       apiKey: apiKey || "",
       temperature: 0.1,
@@ -17,8 +22,8 @@ export async function POST(req: Request) {
 
     const ai = createProvider(config);
     const response = await ai.chat({
-      system: "用中文回复「连接成功」",
-      messages: [{ role: "user", content: "测试" }],
+      system: "Reply with 'OK connected' in English only.",
+      messages: [{ role: "user", content: "ping" }],
     });
 
     return NextResponse.json({
@@ -27,9 +32,11 @@ export async function POST(req: Request) {
       message: response.content,
     });
   } catch (error) {
-    return NextResponse.json({
-      success: false,
-      message: error instanceof Error ? error.message : "连接失败",
-    });
+    const rawMsg = error instanceof Error ? error.message : "连接失败";
+    // 过滤掉 Node.js 底层 ByteString 错误，给出更友好的提示
+    const friendlyMsg = rawMsg.includes("ByteString")
+      ? "AI 服务通信异常，请检查 Provider 和 Base URL 是否匹配，或稍后重试"
+      : rawMsg;
+    return NextResponse.json({ success: false, message: friendlyMsg });
   }
 }

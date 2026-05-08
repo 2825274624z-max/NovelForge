@@ -11,8 +11,8 @@ export async function PUT(req: Request) {
     }
 
     const data = {
-      provider: provider || "openai", model: model || "gpt-4o",
-      baseUrl: baseUrl || "", apiKey: apiKey || "",
+      provider: provider || "deepseek", model: model || "deepseek-v4-flash",
+      baseUrl: baseUrl || "https://api.deepseek.com", apiKey: apiKey || "",
       temperature: temperature ?? 0.7, maxTokens: maxTokens ?? 8192,
       topP: topP ?? 1.0, frequencyPenalty: frequencyPenalty ?? 0,
       presencePenalty: presencePenalty ?? 0, reasoningEffort: reasoningEffort || "",

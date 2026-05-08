@@ -42,6 +42,7 @@ export function useProjects() {
     queryKey: qk.projects,
     queryFn: async (): Promise<Project[]> => {
       const res = await fetch("/api/projects");
+      if (!res.ok) throw new Error("获取作品列表失败");
       return res.json();
     },
   });
@@ -52,6 +53,7 @@ export function useProject(id: string | undefined) {
     queryKey: qk.project(id ?? ""),
     queryFn: async (): Promise<ProjectDetail | null> => {
       const res = await fetch(`/api/projects?id=${id}`);
+      if (!res.ok) throw new Error("获取作品详情失败");
       return res.json();
     },
     enabled: !!id,
@@ -80,11 +82,13 @@ export function useUpdateProject() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: Record<string, unknown>) => {
-      await fetch(`/api/projects?id=${id}`, {
+      const res = await fetch(`/api/projects?id=${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      if (!res.ok) throw new Error("更新作品失败");
+      return res.json();
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: qk.projects });
@@ -235,11 +239,13 @@ export function useCreateAsset() {
   return useMutation({
     mutationFn: async (vars: { type: string; projectId: string } & Record<string, string>) => {
       const { type, projectId, ...data } = vars;
-      await fetch(ASSET_API[type], {
+      const res = await fetch(ASSET_API[type], {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, ...data }),
       });
+      if (!res.ok) throw new Error("创建资产失败");
+      return res.json();
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: qk.assets(vars.projectId) });
@@ -252,11 +258,13 @@ export function useUpdateAsset() {
   return useMutation({
     mutationFn: async (vars: { type: string; id: string; projectId: string } & Record<string, unknown>) => {
       const { type, id, projectId, ...data } = vars;
-      await fetch(`${ASSET_API[type]}?id=${id}`, {
+      const res = await fetch(`${ASSET_API[type]}?id=${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      if (!res.ok) throw new Error("更新资产失败");
+      return res.json();
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: qk.assets(vars.projectId) });
@@ -276,7 +284,8 @@ export function useDeleteAsset() {
       id: string;
       projectId: string;
     }) => {
-      await fetch(`${ASSET_API[type]}?id=${id}`, { method: "DELETE" });
+      const res = await fetch(`${ASSET_API[type]}?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("删除资产失败");
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: qk.assets(vars.projectId) });
@@ -336,11 +345,13 @@ export function useSaveAISettings() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
-      await fetch("/api/ai/settings", {
+      const res = await fetch("/api/ai/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      if (!res.ok) throw new Error("保存AI设置失败");
+      return res.json();
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: qk.project(vars.projectId as string) });

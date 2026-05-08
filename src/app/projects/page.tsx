@@ -39,7 +39,8 @@ import { toast } from "sonner";
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const { data: projects = [], isLoading } = useProjects();
+  const { data: rawProjects, isLoading } = useProjects();
+  const projects = Array.isArray(rawProjects) ? rawProjects : [];
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
   const [open, setOpen] = useState(false);

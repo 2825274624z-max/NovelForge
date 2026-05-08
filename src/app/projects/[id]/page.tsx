@@ -15,6 +15,7 @@ import { FileText, Plus, Trash2, Sparkles, Users, Globe, Eye, ArrowLeft, Setting
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { StatsPanel } from "@/components/stats-panel";
+import { MemoryStatus } from "@/components/memory-status";
 import { EditorPanel } from "./editor-panel";
 import { AIPanel } from "./ai-panel";
 import { AssetSheet } from "./asset-sheet";
@@ -77,23 +78,34 @@ export default function ProjectPage() {
   // 编辑器状态
   const { currentChapterId, chapterContent, chapterTitle, saving, wordCount, loadChapter, setChapterContent, setChapterTitle, setWordCount, saveChapter, addChapter, deleteChapter } = useEditorStore();
 
-  // AI 设定表单
-  const defaultAI = { provider: "openai", model: "gpt-4o", baseUrl: "", apiKey: "", temperature: 0.7, maxTokens: 8192, topP: 1.0, frequencyPenalty: 0, presencePenalty: 0, reasoningEffort: "" };
+  // AI 设定表单 — 默认值用 DeepSeek
+  const defaultAI = { provider: "deepseek", model: "deepseek-v4-flash", baseUrl: "https://api.deepseek.com", apiKey: "", temperature: 0.7, maxTokens: 8192, topP: 1.0, frequencyPenalty: 0, presencePenalty: 0, reasoningEffort: "" };
   const [aiSettings, setAiSettings] = useState(defaultAI);
 
   // 项目表单
   const defaultForm = { title: "", type: "novel", genre: "", style: "", targetWords: 0, description: "", worldView: "", writingReqs: "" };
   const [projectForm, setProjectForm] = useState(defaultForm);
 
-  // 同步远端 → 本地
+  // 首次加载标记 — 只在数据首次加载时同步远端 → 本地
+  const aiSettingsLoaded = useRef(false);
+
+  // 同步远端 → 本地（仅首次加载时，避免覆盖用户正在编辑的值）
   useEffect(() => {
-    if (projectData?.aiSettings) setAiSettings({
-      provider: projectData.aiSettings.provider || "openai", model: projectData.aiSettings.model || "gpt-4o",
-      baseUrl: projectData.aiSettings.baseUrl || "", apiKey: projectData.aiSettings.apiKey || "",
-      temperature: projectData.aiSettings.temperature ?? 0.7, maxTokens: projectData.aiSettings.maxTokens ?? 8192,
-      topP: (projectData.aiSettings as any).topP ?? 1.0, frequencyPenalty: (projectData.aiSettings as any).frequencyPenalty ?? 0,
-      presencePenalty: (projectData.aiSettings as any).presencePenalty ?? 0, reasoningEffort: (projectData.aiSettings as any).reasoningEffort || "",
-    });
+    if (projectData?.aiSettings && !aiSettingsLoaded.current) {
+      aiSettingsLoaded.current = true;
+      setAiSettings({
+        provider: projectData.aiSettings.provider || "deepseek",
+        model: projectData.aiSettings.model || "deepseek-v4-flash",
+        baseUrl: projectData.aiSettings.baseUrl || "https://api.deepseek.com",
+        apiKey: projectData.aiSettings.apiKey || "",
+        temperature: projectData.aiSettings.temperature ?? 0.7,
+        maxTokens: projectData.aiSettings.maxTokens ?? 8192,
+        topP: (projectData.aiSettings as any).topP ?? 1.0,
+        frequencyPenalty: (projectData.aiSettings as any).frequencyPenalty ?? 0,
+        presencePenalty: (projectData.aiSettings as any).presencePenalty ?? 0,
+        reasoningEffort: (projectData.aiSettings as any).reasoningEffort || "",
+      });
+    }
   }, [projectData]);
 
   useEffect(() => {
@@ -173,6 +185,15 @@ export default function ProjectPage() {
             await fetch(`/api/chapters?id=${chId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ summary: summary.trim() }) });
           }
         }).catch(() => {}).finally(() => { autoSummaryBusy.current = false; });
+
+        // 自动记忆提取（后台静默执行）
+        if (currentChapterId) {
+          fetch("/api/memory/extract", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ projectId, chapterId: currentChapterId }),
+          }).catch(() => {});
+        }
       }
     }
     prevSaving.current = saving;
@@ -203,7 +224,97 @@ export default function ProjectPage() {
 
   const handleAddAsset = async (type: AssetType) => {
     const defs: Record<AssetType, Record<string, string>> = { character: { name: "新角色" }, world: { title: "新条目" }, location: { name: "新地点" }, organization: { name: "新组织" }, item: { name: "新物品" }, fore: { title: "新伏笔" }, timeline: { title: "新事件" } };
-    try { await createAsset.mutateAsync({ type, projectId, ...defs[type] }); toast.success("已添加"); } catch { toast.error("添加失败"); }
+    try { await createAsset.mutateAsync({ type, projectId, ...defs[type] }); toast.success("已添加"); } catch (e) { toast.error(`添加失败: ${e instanceof Error ? e.message : "未知错误"}`); }
+  };
+
+  // 从章节 AI 生成资产卡片
+  const [generatingAssets, setGeneratingAssets] = useState(false);
+  const handleGenerateAssetCard = async (chapterIds: string[], assetTypes: string[]) => {
+    if (!aiSettings.provider || !aiSettings.model) { toast.error("请先在设置中配置 AI 模型"); return; }
+    setGeneratingAssets(true);
+    try {
+      let chapterContents = "";
+      for (const chId of chapterIds) {
+        const ch = chapters.find((c) => c.id === chId);
+        if (!ch) continue;
+        if (chId === currentChapterId) {
+          chapterContents += `\n## ${ch.title}\n${editorRef.current?.getText() || ""}`;
+        } else {
+          const res = await fetch(`/api/chapters?id=${chId}`);
+          const data = await res.json();
+          chapterContents += `\n## ${data.title || ch.title}\n${data.content || ""}`;
+        }
+      }
+      if (!chapterContents.trim()) { toast.error("所选章节无内容"); setGeneratingAssets(false); return; }
+
+      const response = await fetch("/api/ai", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: aiSettings.provider, model: aiSettings.model, baseUrl: aiSettings.baseUrl, apiKey: aiSettings.apiKey,
+          temperature: 0.4, maxTokens: 4096, workflow: "assetCard",
+          message: `请从以下章节内容中提取资产信息：\n${chapterContents.slice(0, 8000)}`,
+          context: `作品：${projectForm.title}\n简介：${projectForm.description}`,
+        }),
+      });
+      if (!response.ok) throw new Error("AI 请求失败");
+      const text = await response.text();
+      // 解析 JSON（AI 可能用 ```json 包裹）
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
+      const jsonStr = jsonMatch ? jsonMatch[1].trim() : text.trim();
+      const parsed = JSON.parse(jsonStr);
+
+      let created = 0;
+      // 创建角色
+      if (parsed.characters?.length > 0) {
+        for (const c of parsed.characters) {
+          try {
+            await createAsset.mutateAsync({ type: "character", projectId, ...c });
+            created++;
+          } catch { /* skip */ }
+        }
+      }
+      // 创建世界观条目
+      if (parsed.worldItems?.length > 0) {
+        for (const w of parsed.worldItems) {
+          try {
+            await createAsset.mutateAsync({ type: "world", projectId, ...w });
+            created++;
+          } catch { /* skip */ }
+        }
+      }
+      // 创建地点
+      if (parsed.locations?.length > 0) {
+        for (const l of parsed.locations) {
+          try {
+            await createAsset.mutateAsync({ type: "location", projectId, ...l });
+            created++;
+          } catch { /* skip */ }
+        }
+      }
+      // 创建物品
+      if (parsed.items?.length > 0) {
+        for (const i of parsed.items) {
+          try {
+            await createAsset.mutateAsync({ type: "item", projectId, ...i });
+            created++;
+          } catch { /* skip */ }
+        }
+      }
+      // 创建伏笔
+      if (parsed.foreshadowings?.length > 0) {
+        for (const f of parsed.foreshadowings) {
+          try {
+            await createAsset.mutateAsync({ type: "fore", projectId, ...f });
+            created++;
+          } catch { /* skip */ }
+        }
+      }
+      toast.success(`已从 ${chapterIds.length} 章中生成 ${created} 个资产卡片`);
+    } catch (e) {
+      toast.error(`资产生成失败: ${e instanceof Error ? e.message : "未知错误"}`);
+    } finally {
+      setGeneratingAssets(false);
+    }
   };
 
   const handleSaveAsset = async (type: AssetType, id: string, data: Record<string, unknown>) => { await updateAsset.mutateAsync({ type, id, projectId, ...data }); };
@@ -215,7 +326,9 @@ export default function ProjectPage() {
       await updateProject.mutateAsync({ id: projectId, ...projectForm });
       toast.success("设置已保存");
       setPanels((p) => ({ ...p, settings: false }));
-    } catch { toast.error("保存失败"); }
+    } catch (e) {
+      toast.error(`保存失败: ${e instanceof Error ? e.message : "未知错误"}`);
+    }
   };
 
   const handleTestConnection = async () => {
@@ -224,11 +337,24 @@ export default function ProjectPage() {
 
   const handleExport = async (fmt: string) => {
     try {
-      const res = await fetch(`/api/export?projectId=${projectId}&format=${fmt}`); if (!res.ok) throw new Error();
-      const blob = await res.blob(); const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = `${projectForm.title || "export"}.${fmt}`; a.click(); URL.revokeObjectURL(url);
+      const res = await fetch(`/api/export?projectId=${projectId}&format=${fmt}`);
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || `HTTP ${res.status}`);
+      }
+      // 优先使用服务端设置的文件名
+      const disposition = res.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename\*?=(?:UTF-8''|"?)?"?([^";]+(?:\.[^";]+))"?/);
+      const safeTitle = (projectForm.title || "export").replace(/[\\/:*?"<>|]/g, "_");
+      const filename = match?.[1] || `${safeTitle}.${fmt}`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success(`已导出 ${fmt.toUpperCase()}`);
-    } catch { toast.error("导出失败"); }
+    } catch (e) {
+      toast.error(`导出失败: ${e instanceof Error ? e.message : "未知错误"}`);
+    }
   };
 
   const handleAddChapter = async () => {
@@ -392,6 +518,7 @@ export default function ProjectPage() {
                 <span className="flex-1 text-left">故事大纲</span>
                 <span className="text-[9px] opacity-40">{(projectData?.outline?.length ?? 0) > 0 ? "✓" : "+"}</span>
               </button>
+              <MemoryStatus projectId={projectId} />
             </div>
             <div className="mt-auto pt-2 pb-1.5 px-2 border-t border-border/20">
               <p className="text-[9px] text-muted-foreground/30 text-center leading-relaxed">NovelForge · 斗包要打野 · 2825274624z@gmail.com</p>
@@ -427,7 +554,8 @@ export default function ProjectPage() {
       <AssetSheet open={panels.asset} activeType={activeAssetType} onOpenChange={(v) => setPanels((p) => ({ ...p, asset: v }))}
         onTypeChange={setActiveAssetType} items={assetMap[activeAssetType]}
         chapters={chapters.map((ch) => ({ id: ch.id, title: ch.title }))} organizations={orgs} characters={chars}
-        onAdd={handleAddAsset} onSave={handleSaveAsset} onDelete={handleDeleteAsset} />
+        onAdd={handleAddAsset} onSave={handleSaveAsset} onDelete={handleDeleteAsset}
+        onGenerateAssetCard={handleGenerateAssetCard} generatingAssets={generatingAssets} />
 
       <OutlineSheet open={panels.outline} onOpenChange={(v) => setPanels((p) => ({ ...p, outline: v }))}
         outline={projectData?.outline || ""} onSave={handleSaveOutline} onGenerate={handleGenerateOutline} />

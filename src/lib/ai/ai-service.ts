@@ -11,6 +11,7 @@ export const WORKFLOW_LABELS: Record<string, string> = {
   consistency: "一致性检查",
   summary: "章节总结",
   nextChapter: "下一章建议",
+  assetCard: "生成资产卡片",
 };
 
 export const WORKFLOW_LIST = Object.entries(WORKFLOW_LABELS).map(([value, label]) => ({ value, label }));
@@ -103,6 +104,30 @@ export const SYSTEM_PROMPTS: Record<string, string> = {
 4. 建议的写作角度和切入点
 5. 可能的章节结构和节奏安排
 请用中文回复。`,
+
+  assetCard: `你是一位专业的文学设定整理师。请根据提供的章节内容，提取并整理成结构化的资产卡片。
+
+你需要分析文本并输出以下内容（使用 JSON 格式）：
+
+【角色】- 提取所有出场或提及的角色：
+name(姓名)、identity(身份)、personality(性格)、goals(目标)、relationships(关系)、appearance(外貌)、backstory(背景)
+
+【世界观条目】- 提取世界设定相关：
+title(名称)、type(类型：规则/历史/势力/限制)、content(详细描述)
+
+【地点】- 提取场景地点：
+name(名称)、type(类型)、description(描述)
+
+【物品/能力】- 提取特殊物品或能力：
+name(名称)、type(类型)、effect(效果)、description(描述)
+
+【伏笔】- 提取可能被埋设的伏笔：
+title(标题)、description(说明)、chapterHint(所在章节提示)
+
+输出严格 JSON 格式，不包含任何额外说明文字：
+{"characters":[{"name":"","identity":"","personality":"","goals":"","relationships":"","appearance":"","backstory":""}],"worldItems":[{"title":"","type":"","content":""}],"locations":[{"name":"","type":"","description":""}],"items":[{"name":"","type":"","effect":"","description":""}],"foreshadowings":[{"title":"","description":"","chapterHint":""}]}
+
+没有提取到的类型返回空数组。只输出 JSON，不要有其他任何文字。`,
 };
 
 export type WorkflowType = keyof typeof SYSTEM_PROMPTS;

@@ -64,6 +64,11 @@ export function SettingsSheet({
     openai: "gpt-4o", anthropic: "claude-sonnet-4-5", gemini: "gemini-2.5-flash",
     deepseek: "deepseek-v4-flash", openrouter: "anthropic/claude-sonnet-4-5", ollama: "llama3.2",
   };
+  const baseUrlDefaults: Record<string, string> = {
+    openai: "https://api.openai.com/v1", anthropic: "https://api.anthropic.com/v1",
+    gemini: "https://generativelanguage.googleapis.com/v1beta", deepseek: "https://api.deepseek.com",
+    openrouter: "https://openrouter.ai/api/v1", ollama: "http://localhost:11434/v1",
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -129,7 +134,7 @@ export function SettingsSheet({
               <Label className="text-[10px]">Provider</Label>
               <Select value={aiSettings.provider} onValueChange={(v) => {
                 if (!v) return;
-                setAi({ provider: v, model: modelDefaults[v] || "gpt-4o" });
+                setAi({ provider: v, model: modelDefaults[v] || "deepseek-v4-flash", baseUrl: baseUrlDefaults[v] || "https://api.deepseek.com" });
               }}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{PROVIDERS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
@@ -183,24 +188,19 @@ export function SettingsSheet({
                   <div className="space-y-1.5">
                     <Label className="text-[10px]">Top P</Label>
                     <Input type="number" min={0} max={1} step={0.05} className="text-xs h-8"
-                      value={aiSettings.topP} onChange={(e) => setAi({ topP: parseFloat(e.target.value) ?? 1.0 })} />
+                      value={aiSettings.topP} onChange={(e) => setAi({ topP: parseFloat(e.target.value) || 1.0 })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-[10px]">频率惩罚</Label>
                     <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
-                      value={aiSettings.frequencyPenalty} onChange={(e) => setAi({ frequencyPenalty: parseFloat(e.target.value) ?? 0 })} />
+                      value={aiSettings.frequencyPenalty} onChange={(e) => setAi({ frequencyPenalty: parseFloat(e.target.value) || 0 })} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[10px]">频率惩罚</Label>
-                    <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
-                      value={aiSettings.frequencyPenalty} onChange={(e) => setAi({ frequencyPenalty: parseFloat(e.target.value) ?? 0 })} />
-                  </div>
-                  <div className="space-y-1.5">
                     <Label className="text-[10px]">存在惩罚</Label>
                     <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
-                      value={aiSettings.presencePenalty} onChange={(e) => setAi({ presencePenalty: parseFloat(e.target.value) ?? 0 })} />
+                      value={aiSettings.presencePenalty} onChange={(e) => setAi({ presencePenalty: parseFloat(e.target.value) || 0 })} />
                   </div>
                 </div>
                 <div className="space-y-1.5">

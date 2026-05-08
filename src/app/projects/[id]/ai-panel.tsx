@@ -245,10 +245,10 @@ export function AIPanel({
                     <Tooltip>
                       <TooltipTrigger>
                         <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95" onClick={onInsert}>
-                          替换正文
+                          替换选中
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>替换编辑器选中区域</TooltipContent>
+                      <TooltipContent>替换编辑器选中区域（无选中则替换全文）</TooltipContent>
                     </Tooltip>
                   )}
                   <Tooltip>

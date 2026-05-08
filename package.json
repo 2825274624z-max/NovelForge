@@ -1,13 +1,57 @@
 {
   "name": "novelforge",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "npx tsx prisma/seed.ts",
+    "electron:dev": "NODE_ENV=development electron .",
+    "electron:build": "next build && electron-builder",
+    "electron:build:win": "next build && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.novelforge.app",
+    "productName": "NovelForge",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      ".next/**/*",
+      "prisma/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone"
+      },
+      {
+        "from": "prisma",
+        "to": "prisma"
+      },
+      {
+        "from": "public",
+        "to": "public"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/favicon.ico"
+    },
+    "portable": {
+      "artifactName": "NovelForge-${version}.exe"
+    }
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -46,6 +90,8 @@
     "@types/react-dom": "^19",
     "@types/turndown": "^5.0.6",
     "@types/uuid": "^10.0.0",
+    "electron": "^42.0.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.5",
     "prettier": "^3.8.3",

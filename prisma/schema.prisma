@@ -35,6 +35,12 @@ model Project {
   aiSettings    AISettings?
   aiGenerations AIGeneration[]
   dailyLogs     DailyWritingLog[]
+  volumes       Volume[]
+  storyArcs     StoryArc[]
+  plotThreads   PlotThread[]
+  timelineEvents TimelineEvent[]
+  chekhovGuns   ChekhovGun[]
+  characterStates CharacterState[]
 }
 
 model Chapter {
@@ -54,6 +60,7 @@ model Chapter {
   notes     String @default("")
 
   histories ChapterHistory[]
+  outline   ChapterOutline?
 
   @@index([projectId])
 }
@@ -269,4 +276,125 @@ model AIGeneration {
 
   @@index([projectId])
   @@index([chapterId])
+}
+
+// ─── v0.5: 记忆系统 + 分级大纲 ───
+
+model Volume {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title     String
+  order     Int
+  summary   String   @default("")
+  wordTarget Int?
+  wordCount Int      @default(0)
+  status    String   @default("planned") // planned|writing|done
+
+  @@index([projectId])
+}
+
+model StoryArc {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String  @default("")
+  arcType     String  @default("plot") // character|plot|theme
+  status      String  @default("open") // open|ongoing|resolved
+
+  @@index([projectId])
+}
+
+model PlotThread {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String  @default("")
+  priority        Int     @default(1)
+  status          String  @default("open") // open|ongoing|resolved|dropped
+  openedChapter   Int?
+  resolvedChapter Int?
+  note            String  @default("")
+
+  @@index([projectId])
+}
+
+model CharacterState {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characterId String
+  chapterNum  Int
+  location    String  @default("")
+  goal        String  @default("")
+  emotion     String  @default("")
+  relationships String @default("")
+  note        String  @default("")
+
+  @@index([projectId])
+  @@index([characterId])
+  @@index([chapterNum])
+}
+
+model TimelineEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId  String
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  chapterNum Int
+  eventDesc  String
+  storyTime  String  @default("")
+  characters String  @default("") // JSON array of character IDs
+
+  @@index([projectId])
+  @@index([chapterNum])
+}
+
+model ChekhovGun {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId      String
+  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  description    String
+  plantedChapter Int
+  payedChapter   Int?
+  status         String  @default("planted") // planted|paid_off|abandoned
+
+  @@index([projectId])
+}
+
+model ChapterOutline {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chapterId String  @unique
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  summary       String @default("")
+  keyEvents     String @default("[]") // JSON
+  characterArcs String @default("[]") // JSON
+  plotThreads   String @default("[]") // JSON
+  wordTarget    Int    @default(0)
 }

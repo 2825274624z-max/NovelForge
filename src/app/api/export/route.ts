@@ -4,29 +4,21 @@ import { prisma } from "@/lib/db";
 function htmlToText(html: string): string {
   if (!html) return "";
   let t = html;
-  // 解码 HTML 实体
   t = t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
-  // 块级元素 → 换行
   t = t.replace(/<\/?(div|section|article)[^>]*>/gi, "\n");
   t = t.replace(/<br\s*\/?>/gi, "\n");
   t = t.replace(/<\/p>/gi, "\n\n");
   t = t.replace(/<\/h[1-6]>/gi, "\n\n");
   t = t.replace(/<\/li>/gi, "\n");
   t = t.replace(/<\/(ul|ol|blockquote|hr|table)>/gi, "\n\n");
-  // 标题 → markdown 标记
   t = t.replace(/<h1[^>]*>/gi, "\n# ");
   t = t.replace(/<h2[^>]*>/gi, "\n## ");
   t = t.replace(/<h3[^>]*>/gi, "\n### ");
-  // 列表项
   t = t.replace(/<li[^>]*>/gi, "\n- ");
-  // blockquote
   t = t.replace(/<blockquote[^>]*>/gi, "\n> ");
-  // 粗体/斜体
   t = t.replace(/<\/?(strong|b)>/gi, "**");
   t = t.replace(/<\/?(em|i)>/gi, "*");
-  // 删除所有剩余标签
   t = t.replace(/<[^>]*>/g, "");
-  // 清理多余空行
   t = t.replace(/\n{3,}/g, "\n\n");
   t = t.replace(/^[ \t]+/gm, "");
   return t.trim();
@@ -45,6 +37,12 @@ export async function GET(req: Request) {
     });
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
+    // 用于 filename= 参数只能用 ASCII，中文等非 ASCII 字符转为 _
+    const rawTitle = project.title || "export";
+    const asciiName = rawTitle.replace(/[^\x00-\x7F]/g, "_").replace(/[\\/:*?"<>|]/g, "_") || "export";
+    // RFC 5987 编码用于 filename*= 参数（Node.js 的 undici 对 HTTP header 值中的非 ASCII 字符会报 ByteString 错误）
+    const encoded = encodeURIComponent(rawTitle);
+
     // JSON 完整导出
     if (format === "json") {
       const full = await prisma.project.findUnique({
@@ -57,14 +55,19 @@ export async function GET(req: Request) {
         },
       });
       return new NextResponse(JSON.stringify(full, null, 2), {
-        headers: { "Content-Type": "application/json", "Content-Disposition": `attachment; filename="${project.title}.json"` },
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${asciiName}.json"; filename*=UTF-8''${encoded}.json`,
+        },
       });
     }
 
-    // TXT / MD → 都转纯文本（MD 加标题格式）
+    // TXT / MD
     const chapters = project.chapters.filter((c) => c.content).map((c, i) => {
       const body = htmlToText(c.content);
-      return format === "md" ? `## 第${i + 1}章 ${c.title}\n\n${body}` : `第${i + 1}章 ${c.title}\n${"=".repeat(20)}\n${body}`;
+      return format === "md"
+        ? `## 第${i + 1}章 ${c.title}\n\n${body}`
+        : `第${i + 1}章 ${c.title}\n${"=".repeat(20)}\n${body}`;
     });
 
     const header = format === "md"
@@ -75,7 +78,10 @@ export async function GET(req: Request) {
     const contentType = format === "md" ? "text/markdown; charset=utf-8" : "text/plain; charset=utf-8";
 
     return new NextResponse(content, {
-      headers: { "Content-Type": contentType, "Content-Disposition": `attachment; filename="${project.title}.${format}"` },
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": `attachment; filename="${asciiName}.${format}"; filename*=UTF-8''${encoded}.${format}`,
+      },
     });
   } catch (error) {
     console.error("GET /api/export error:", error);
