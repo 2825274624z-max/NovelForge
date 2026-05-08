@@ -94,7 +94,7 @@ export default function ProjectPage() {
       topP: (projectData.aiSettings as any).topP ?? 1.0, frequencyPenalty: (projectData.aiSettings as any).frequencyPenalty ?? 0,
       presencePenalty: (projectData.aiSettings as any).presencePenalty ?? 0, reasoningEffort: (projectData.aiSettings as any).reasoningEffort || "",
     });
-  }, [projectData?.id]);
+  }, [projectData]);
 
   useEffect(() => {
     if (projectData) setProjectForm({
@@ -102,7 +102,7 @@ export default function ProjectPage() {
       style: projectData.style || "", targetWords: projectData.targetWords || 0,
       description: projectData.description || "", worldView: projectData.worldView || "", writingReqs: projectData.writingReqs || "",
     });
-  }, [projectData?.id]);
+  }, [projectData]);
 
   // 资产数据
   const chars = (assetsData?.characters ?? []) as AssetEntry[];

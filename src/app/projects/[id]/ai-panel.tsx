@@ -18,7 +18,7 @@ const WORKFLOW_CHIPS = [
   { value: "polish", label: "润色", desc: "选中文字 → 优化表达", icon: "✨" },
   { value: "expand", label: "扩写", desc: "选中文字 → 丰富细节", icon: "📖" },
   { value: "shorten", label: "缩写", desc: "选中文字 → 精简表达", icon: "✂️" },
-  { value: "rewrite", label: "风格改写", desc: "选中文字 → 变换风格", icon: "🔄" },
+  { value: "rewrite", label: "重写", desc: "选中→段落 / 全文→整章", icon: "🔄" },
 ];
 
 const AI_ASSET_OPTS = [
@@ -231,15 +231,26 @@ export function AIPanel({
                     </TooltipTrigger>
                     <TooltipContent>复制到剪贴板</TooltipContent>
                   </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95"
-                        onClick={onInsert}>
-                        插入正文
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>追加到编辑器末尾</TooltipContent>
-                  </Tooltip>
+                  {(["draft", "continue"].includes(workflow)) && (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95" onClick={onInsert}>
+                          插入正文
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>追加到编辑器光标处</TooltipContent>
+                    </Tooltip>
+                  )}
+                  {(["polish", "expand", "shorten", "rewrite"].includes(workflow)) && (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95" onClick={onInsert}>
+                          替换正文
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>替换编辑器选中区域</TooltipContent>
+                    </Tooltip>
+                  )}
                   <Tooltip>
                     <TooltipTrigger>
                       <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95"

@@ -1,26 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import TurndownService from "turndown";
 
 function stripHtml(html: string): string {
   if (!html) return "";
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-function htmlToMd(html: string): string {
-  if (!html) return "";
-  try {
-    const td = new TurndownService({ headingStyle: "atx" });
-    return td.turndown(html);
-  } catch {
-    return stripHtml(html);
-  }
+  return html.replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 }
 
 export async function GET(req: Request) {
@@ -86,7 +69,7 @@ export async function GET(req: Request) {
     // Default: Markdown
     const chapterMds = project.chapters
       .filter((ch) => ch.content)
-      .map((ch, i) => `## 第${i + 1}章 ${ch.title}\n\n${htmlToMd(ch.content)}\n`);
+      .map((ch, i) => `## 第${i + 1}章 ${ch.title}\n\n${stripHtml(ch.content)}\n`);
     const md = [
       `# ${project.title}`,
       "",
