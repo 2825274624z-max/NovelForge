@@ -47,6 +47,7 @@ export async function POST(req: Request) {
         description: body.description || "",
         worldView: body.worldView || "",
         writingReqs: body.writingReqs || "",
+        outline: body.outline || "",
       },
     });
     return NextResponse.json(project, { status: 201 });
@@ -77,6 +78,7 @@ export async function PUT(req: Request) {
         description: body.description,
         worldView: body.worldView,
         writingReqs: body.writingReqs,
+        outline: body.outline,
         status: body.status,
       },
     });

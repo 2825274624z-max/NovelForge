@@ -19,10 +19,6 @@ const WORKFLOW_CHIPS = [
   { value: "expand", label: "扩写", desc: "丰富细节和描写", icon: "📖" },
   { value: "shorten", label: "缩写", desc: "精简冗余表达", icon: "✂️" },
   { value: "rewrite", label: "风格改写", desc: "变换写作风格", icon: "🔄" },
-  { value: "outline", label: "大纲", desc: "生成故事大纲", icon: "📋" },
-  { value: "summary", label: "章节总结", desc: "概括当前章节", icon: "📄" },
-  { value: "consistency", label: "一致性检查", desc: "检查情节矛盾", icon: "🔍" },
-  { value: "nextChapter", label: "下一章建议", desc: "生成写作建议", icon: "💡" },
 ];
 
 const AI_ASSET_OPTS = [

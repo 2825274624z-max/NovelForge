@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS Project (
   worldView TEXT NOT NULL DEFAULT '',
   writingReqs TEXT NOT NULL DEFAULT '',
   coverPrompt TEXT NOT NULL DEFAULT '',
+  outline TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'draft'
 );
 
@@ -178,7 +179,11 @@ CREATE TABLE IF NOT EXISTS AISettings (
   baseUrl TEXT NOT NULL DEFAULT '',
   apiKey TEXT NOT NULL DEFAULT '',
   temperature REAL NOT NULL DEFAULT 0.7,
-  maxTokens INTEGER NOT NULL DEFAULT 4096,
+  maxTokens INTEGER NOT NULL DEFAULT 8192,
+  topP REAL NOT NULL DEFAULT 1.0,
+  frequencyPenalty REAL NOT NULL DEFAULT 0,
+  presencePenalty REAL NOT NULL DEFAULT 0,
+  reasoningEffort TEXT NOT NULL DEFAULT '',
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
 );
 
@@ -270,6 +275,12 @@ const migrations = [
   )`,
   "CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project ON DailyWritingLog(projectId)",
   "CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project_date ON DailyWritingLog(projectId, date)",
+  // v0.4: Project outline + AISettings advanced params
+  "ALTER TABLE Project ADD COLUMN outline TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AISettings ADD COLUMN topP REAL NOT NULL DEFAULT 1.0",
+  "ALTER TABLE AISettings ADD COLUMN frequencyPenalty REAL NOT NULL DEFAULT 0",
+  "ALTER TABLE AISettings ADD COLUMN presencePenalty REAL NOT NULL DEFAULT 0",
+  "ALTER TABLE AISettings ADD COLUMN reasoningEffort TEXT NOT NULL DEFAULT ''",
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch { /* column already exists */ }

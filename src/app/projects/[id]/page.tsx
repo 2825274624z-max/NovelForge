@@ -18,6 +18,7 @@ import { StatsPanel } from "@/components/stats-panel";
 import { EditorPanel } from "./editor-panel";
 import { AIPanel } from "./ai-panel";
 import { AssetSheet } from "./asset-sheet";
+import { OutlineSheet } from "./outline-sheet";
 import { SettingsSheet } from "./settings-sheet";
 import type { TiptapEditorHandle } from "@/components/tiptap-editor";
 
@@ -49,7 +50,7 @@ export default function ProjectPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const [panels, setPanels] = useState({ right: true, asset: false, settings: false, stats: false, assetExpanded: true });
+  const [panels, setPanels] = useState({ right: true, asset: false, settings: false, stats: false, outline: false, assetExpanded: true });
   const [activeAssetType, setActiveAssetType] = useState<AssetType>("character");
   const [suggestion, setSuggestion] = useState<string | null>(null);
   const [aiClosing, setAiClosing] = useState(false);
@@ -77,7 +78,7 @@ export default function ProjectPage() {
   const { currentChapterId, chapterContent, chapterTitle, saving, wordCount, loadChapter, setChapterContent, setChapterTitle, setWordCount, saveChapter, addChapter, deleteChapter } = useEditorStore();
 
   // AI 设定表单
-  const defaultAI = { provider: "openai", model: "gpt-4o", baseUrl: "", apiKey: "", temperature: 0.7, maxTokens: 8192 };
+  const defaultAI = { provider: "openai", model: "gpt-4o", baseUrl: "", apiKey: "", temperature: 0.7, maxTokens: 8192, topP: 1.0, frequencyPenalty: 0, presencePenalty: 0, reasoningEffort: "" };
   const [aiSettings, setAiSettings] = useState(defaultAI);
 
   // 项目表单
@@ -89,7 +90,9 @@ export default function ProjectPage() {
     if (projectData?.aiSettings) setAiSettings({
       provider: projectData.aiSettings.provider || "openai", model: projectData.aiSettings.model || "gpt-4o",
       baseUrl: projectData.aiSettings.baseUrl || "", apiKey: projectData.aiSettings.apiKey || "",
-      temperature: projectData.aiSettings.temperature ?? 0.7, maxTokens: projectData.aiSettings.maxTokens ?? 4096,
+      temperature: projectData.aiSettings.temperature ?? 0.7, maxTokens: projectData.aiSettings.maxTokens ?? 8192,
+      topP: (projectData.aiSettings as any).topP ?? 1.0, frequencyPenalty: (projectData.aiSettings as any).frequencyPenalty ?? 0,
+      presencePenalty: (projectData.aiSettings as any).presencePenalty ?? 0, reasoningEffort: (projectData.aiSettings as any).reasoningEffort || "",
     });
   }, [projectData?.id]);
 
@@ -212,6 +215,25 @@ export default function ProjectPage() {
 
   const handleDeleteChapter = async (chId: string) => { await deleteChapter(chId); toast.success("章节已删除"); };
 
+  // 大纲操作
+  const handleSaveOutline = async (outline: string) => {
+    await updateProject.mutateAsync({ id: projectId, outline });
+  };
+  const handleGenerateOutline = async (): Promise<string> => {
+    const res = await fetch("/api/ai", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider: aiSettings.provider, model: aiSettings.model, baseUrl: aiSettings.baseUrl, apiKey: aiSettings.apiKey,
+        temperature: aiSettings.temperature, maxTokens: aiSettings.maxTokens,
+        workflow: "outline",
+        message: `请为以下作品生成完整的故事大纲：\n标题：${projectForm.title}\n类型：${projectForm.type}\n题材：${projectForm.genre}\n风格：${projectForm.style}\n简介：${projectForm.description}\n世界观：${projectForm.worldView}`,
+        context: projectForm.description || "",
+      }),
+    });
+    if (!res.ok) throw new Error("生成失败");
+    return await res.text();
+  };
+
   // ─── Computed ───
   const totalWords = chapters.reduce((s, ch) => s + ch.wordCount, 0);
   const wordProgress = projectForm.targetWords > 0 ? Math.min(100, Math.round((totalWords / projectForm.targetWords) * 100)) : 0;
@@ -285,6 +307,14 @@ export default function ProjectPage() {
                 ))}
               </div>
             )}
+            <div className="mt-1.5 pt-1.5 border-t border-border/20 px-1">
+              <button onClick={() => setPanels((p) => ({ ...p, outline: true }))}
+                className="w-full flex items-center gap-1.5 px-1.5 py-1 rounded text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200">
+                <Sparkles className="w-3 h-3 shrink-0" />
+                <span className="flex-1 text-left">故事大纲</span>
+                <span className="text-[9px] opacity-40">{(projectData?.outline?.length ?? 0) > 0 ? "✓" : "+"}</span>
+              </button>
+            </div>
             <div className="mt-auto pt-2 pb-1.5 px-2 border-t border-border/20">
               <p className="text-[9px] text-muted-foreground/30 text-center leading-relaxed">Yuagent · 斗包要打野 · 2825274624z@gmail.com</p>
             </div>
@@ -320,6 +350,9 @@ export default function ProjectPage() {
         onTypeChange={setActiveAssetType} items={assetMap[activeAssetType]}
         chapters={chapters.map((ch) => ({ id: ch.id, title: ch.title }))} organizations={orgs} characters={chars}
         onAdd={handleAddAsset} onSave={handleSaveAsset} onDelete={handleDeleteAsset} />
+
+      <OutlineSheet open={panels.outline} onOpenChange={(v) => setPanels((p) => ({ ...p, outline: v }))}
+        outline={projectData?.outline || ""} onSave={handleSaveOutline} onGenerate={handleGenerateOutline} />
 
       <StatsPanel open={panels.stats} onOpenChange={(v) => setPanels((p) => ({ ...p, stats: v }))} stats={statsData} loading={statsLoading} />
 

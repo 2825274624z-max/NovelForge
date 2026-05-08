@@ -10,9 +10,10 @@ import {
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
-import { Key, Wifi, Loader2, Save, Trash2, Download, FileText } from "lucide-react";
+import { useState } from "react";
+import { Key, Wifi, Loader2, Save, Trash2, Download, FileText, ChevronDown, ChevronRight } from "lucide-react";
 import {
-  Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
+  Tooltip, TooltipTrigger, TooltipContent,
 } from "@/components/ui/tooltip";
 
 const PROVIDERS = [
@@ -32,6 +33,7 @@ interface ProjectForm {
 interface AiSettings {
   provider: string; model: string; baseUrl: string; apiKey: string;
   temperature: number; maxTokens: number;
+  topP: number; frequencyPenalty: number; presencePenalty: number; reasoningEffort: string;
 }
 
 interface Props {
@@ -54,6 +56,7 @@ export function SettingsSheet({
   onProjectFormChange, onAiSettingsChange,
   onSave, onTestConnection, onExport, onDelete,
 }: Props) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const set = (patch: Partial<ProjectForm>) => onProjectFormChange({ ...projectForm, ...patch });
   const setAi = (patch: Partial<AiSettings>) => onAiSettingsChange({ ...aiSettings, ...patch });
 
@@ -167,6 +170,56 @@ export function SettingsSheet({
               </TooltipTrigger>
               <TooltipContent>测试 AI Provider 连接是否正常</TooltipContent>
             </Tooltip>
+
+            <button onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full">
+              {showAdvanced ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+              高级参数（满血配置）
+            </button>
+
+            {showAdvanced && (
+              <div className="space-y-2 animate-in fade-in duration-150">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px]">Top P</Label>
+                    <Input type="number" min={0} max={1} step={0.05} className="text-xs h-8"
+                      value={aiSettings.topP} onChange={(e) => setAi({ topP: parseFloat(e.target.value) ?? 1.0 })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px]">频率惩罚</Label>
+                    <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
+                      value={aiSettings.frequencyPenalty} onChange={(e) => setAi({ frequencyPenalty: parseFloat(e.target.value) ?? 0 })} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px]">频率惩罚</Label>
+                    <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
+                      value={aiSettings.frequencyPenalty} onChange={(e) => setAi({ frequencyPenalty: parseFloat(e.target.value) ?? 0 })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px]">存在惩罚</Label>
+                    <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
+                      value={aiSettings.presencePenalty} onChange={(e) => setAi({ presencePenalty: parseFloat(e.target.value) ?? 0 })} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-[10px]">推理强度（DeepSeek V4 / OpenAI o-series）</Label>
+                  <Select value={aiSettings.reasoningEffort || ""} onValueChange={(v) => setAi({ reasoningEffort: v || "" })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="默认（不启用深度思考）" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">默认</SelectItem>
+                      <SelectItem value="medium">中等</SelectItem>
+                      <SelectItem value="high">高</SelectItem>
+                      <SelectItem value="max">最大</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-[9px] text-muted-foreground leading-relaxed">
+                  DeepSeek V4 Pro 建议 reasoningEffort=max 发挥满血推理能力。Top P &lt; 1 可减少重复输出。
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Export */}

@@ -7,15 +7,13 @@ export const maxDuration = 120;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { provider, model, baseUrl, apiKey, temperature, maxTokens, workflow, message, context } = body;
+    const { provider, model, baseUrl, apiKey, temperature, maxTokens, topP, frequencyPenalty, presencePenalty, reasoningEffort, workflow, message, context } = body;
 
     const config: AIProviderConfig = {
-      provider: provider || "openai",
-      model: model || "gpt-4o",
-      baseUrl: baseUrl || "",
-      apiKey: apiKey || "",
-      temperature: temperature || 0.7,
-      maxTokens: maxTokens || 4096,
+      provider: provider || "openai", model: model || "gpt-4o",
+      baseUrl: baseUrl || "", apiKey: apiKey || "",
+      temperature: temperature || 0.7, maxTokens: maxTokens || 8192,
+      topP, frequencyPenalty, presencePenalty, reasoningEffort,
     };
 
     const ai = createProviderWithRetry(config, 1, 90000);

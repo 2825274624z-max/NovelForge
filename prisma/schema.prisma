@@ -21,6 +21,7 @@ model Project {
   worldView   String   @default("")
   writingReqs String   @default("")
   coverPrompt String   @default("")
+  outline     String   @default("")
   status      String   @default("draft")
 
   chapters      Chapter[]
@@ -220,12 +221,16 @@ model AISettings {
   projectId   String  @unique
   project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  provider    String  @default("openai")
-  model       String  @default("gpt-4o")
-  baseUrl     String  @default("")
-  apiKey      String  @default("")
-  temperature Float   @default(0.7)
-  maxTokens   Int     @default(4096)
+  provider         String  @default("openai")
+  model            String  @default("gpt-4o")
+  baseUrl          String  @default("")
+  apiKey           String  @default("")
+  temperature      Float   @default(0.7)
+  maxTokens        Int     @default(8192)
+  topP             Float   @default(1.0)
+  frequencyPenalty Float   @default(0)
+  presencePenalty  Float   @default(0)
+  reasoningEffort  String  @default("")
 
   @@index([projectId])
 }

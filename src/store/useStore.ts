@@ -11,6 +11,7 @@ export interface Project {
   description: string;
   worldView: string;
   writingReqs: string;
+  outline: string;
   status: string;
   createdAt: string;
   updatedAt: string;
