@@ -333,6 +333,7 @@ export function useTrackWords() {
 // ═══════════════════════════════════════════════════
 
 export function useSaveAISettings() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: Record<string, unknown>) => {
       await fetch("/api/ai/settings", {
@@ -340,6 +341,9 @@ export function useSaveAISettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: qk.project(vars.projectId as string) });
     },
   });
 }

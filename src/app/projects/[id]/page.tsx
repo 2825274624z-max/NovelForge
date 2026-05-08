@@ -210,7 +210,12 @@ export default function ProjectPage() {
   const handleDeleteAsset = async (type: AssetType, id: string) => { await deleteAsset.mutateAsync({ type, id, projectId }); toast.success("已删除"); };
 
   const handleSaveSettings = async () => {
-    try { await updateProject.mutateAsync({ id: projectId, ...projectForm }); await saveAISettings.mutateAsync({ projectId, ...aiSettings }); toast.success("设置已保存"); setPanels((p) => ({ ...p, settings: false })); } catch { toast.error("保存失败"); }
+    try {
+      await saveAISettings.mutateAsync({ projectId, ...aiSettings });
+      await updateProject.mutateAsync({ id: projectId, ...projectForm });
+      toast.success("设置已保存");
+      setPanels((p) => ({ ...p, settings: false }));
+    } catch { toast.error("保存失败"); }
   };
 
   const handleTestConnection = async () => {
