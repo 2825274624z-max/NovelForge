@@ -119,18 +119,21 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
 
     useEffect(() => () => { if (pauseRef.current) clearTimeout(pauseRef.current); }, []);
 
-    // AI 续写快捷键
+    // AI 续写快捷键（capture 阶段确保先于编辑器处理）
     useEffect(() => {
       if (!suggestion || !editor) return;
       const onKey = (e: KeyboardEvent) => {
         if (e.key === "Tab" && !e.ctrlKey && !e.metaKey) { e.preventDefault(); onAcceptSuggestion?.(); }
-        if (e.key === "Escape" && !focusMode) { e.preventDefault(); onDismissSuggestion?.(); }
+        if (e.key === "Escape") {
+          if (focusMode) { setFocusMode(false); editor?.commands.focus(); }
+          else { e.preventDefault(); e.stopPropagation(); onDismissSuggestion?.(); }
+        }
       };
-      window.addEventListener("keydown", onKey);
-      return () => window.removeEventListener("keydown", onKey);
+      document.addEventListener("keydown", onKey, true);
+      return () => document.removeEventListener("keydown", onKey, true);
     }, [suggestion, editor, focusMode, onAcceptSuggestion, onDismissSuggestion]);
 
-    // 专注模式 Esc
+    // 专注模式 Esc（非 capture 备用）
     useEffect(() => {
       if (!focusMode) return;
       const onKey = (e: KeyboardEvent) => {
@@ -145,7 +148,8 @@ export const TiptapEditor = forwardRef<TiptapEditorHandle, TiptapEditorProps>(
     useImperativeHandle(ref, () => ({
       insertContent: (h: string) => editor?.commands.insertContent(h),
       appendText: (t: string) => {
-        const pos = editor?.state.doc.content.size || 0;
+        // 从光标位置插入，如果光标在末尾则追加
+        const pos = editor?.state.selection.from ?? editor?.state.doc.content.size ?? 0;
         editor?.commands.insertContentAt(pos, toHtml(t));
       },
       replaceContent: (c: string) => editor?.commands.setContent(toHtml(c)),

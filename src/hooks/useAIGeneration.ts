@@ -40,6 +40,8 @@ export function useAIGeneration({
   const [aiAssets, setAiAssets] = useState<Record<string, boolean>>({
     characters: true, world: true, locations: true, organizations: true, items: true, fore: true, timeline: true,
   });
+  const lastSelection = useRef<string>("");
+  const needsSelection = ["polish", "expand", "shorten", "rewrite"].includes(workflow);
 
   // ─── 分层上下文构建器 v2 ───
   const buildContext = useCallback(() => {
@@ -119,6 +121,12 @@ export function useAIGeneration({
   const contextTokenCount = estimateTokens(buildContext());
   const contextPreview = buildContext().slice(0, 300) + (buildContext().length > 300 ? "…" : "");
 
+  // 切换工作流时捕获选区（在焦点丢失前）
+  const handleWorkflowChange = useCallback((v: string) => {
+    setWorkflow(v);
+    lastSelection.current = editorRef.current?.getSelection()?.text || "";
+  }, [editorRef]);
+
   // ─── 生成 ───
   const handleGenerate = useCallback(async () => {
     if (!aiMessage && workflow !== "draft") { toast.error("请输入提示词"); return; }
@@ -127,13 +135,16 @@ export function useAIGeneration({
     const controller = new AbortController(); abortRef.current = controller;
     try {
       const ctx = buildContext();
-      // 文本处理类工作流：必须选中文字
-      const needsSelection = ["polish", "expand", "shorten", "rewrite"].includes(workflow);
+      // 文本处理类工作流：有选中→处理选中，无选中→处理全文
       let curContent = "";
       if (needsSelection) {
         const sel = editorRef.current?.getSelection();
-        if (!sel || !sel.text.trim()) { toast.error("请先在编辑器中选中要处理的文字"); setGenerating(false); return; }
-        curContent = sel.text;
+        curContent = sel?.text || lastSelection.current;
+        if (!curContent.trim()) {
+          // 无选中：整章重写
+          curContent = editorRef.current?.getText() || "";
+          if (!curContent.trim()) { toast.error("当前章节无内容"); setGenerating(false); return; }
+        }
       }
       const msg = curContent ? `${aiMessage}\n\n---\n${curContent}` : aiMessage;
       const res = await fetch("/api/ai", {
@@ -150,7 +161,11 @@ export function useAIGeneration({
       while (true) { const { done, value } = await reader.read(); if (done) break; result += decoder.decode(value, { stream: true }); setStreamingContent(result); }
 
       if (["draft", "continue"].includes(workflow)) editorRef.current?.appendText(result);
-      else if (["polish", "expand", "shorten", "rewrite"].includes(workflow)) editorRef.current?.replaceSelection(toHtml(result));
+      else if (needsSelection) {
+        const sel = editorRef.current?.getSelection();
+        if (sel?.text.trim()) editorRef.current?.replaceSelection(toHtml(result));
+        else editorRef.current?.replaceContent(toHtml(result));
+      }
 
       fetch("/api/ai/generations", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -167,7 +182,7 @@ export function useAIGeneration({
   const handleRetry = useCallback(() => { setStreamingContent(""); handleGenerate(); }, [setStreamingContent, handleGenerate]);
 
   return {
-    workflow, setWorkflow, aiMessage, setAiMessage, aiContext, setAiContext, aiAssets, setAiAssets,
+    workflow, setWorkflow: handleWorkflowChange, aiMessage, setAiMessage, aiContext, setAiContext, aiAssets, setAiAssets,
     generating, streamingContent, contextTokenCount, contextPreview,
     handleGenerate, handleCancel, handleInsert, handleRetry,
   };
