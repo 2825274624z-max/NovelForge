@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { QueryProvider } from "@/lib/query-provider";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -26,11 +28,29 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <Script
+          id="theme-flash"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var t = localStorage.getItem('ai-novel-theme') || 'dark';
+                  document.documentElement.classList.add(t);
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider>
-          {children}
-          <Toaster position="top-center" richColors />
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            {children}
+            <Toaster position="top-center" richColors />
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

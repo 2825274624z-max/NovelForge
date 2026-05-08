@@ -16,6 +16,9 @@ import {
   Plus, Pencil, Trash2, Check, Users, Globe, MapPin,
   Building2, Package, Eye, Clock, FileText,
 } from "lucide-react";
+import {
+  Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 type AssetType = "character" | "world" | "location" | "organization" | "item" | "fore" | "timeline";
@@ -133,7 +136,7 @@ export function AssetSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col">
+      <SheetContent side="right" className="w-[calc(100vw-2rem)] sm:w-[380px] md:w-[420px] p-0 flex flex-col max-w-full">
         <SheetHeader className="p-4 pb-2 border-b">
           <SheetTitle className="text-sm flex items-center gap-2">
             <Icon className="w-4 h-4" /> {LABELS[activeType]}
@@ -276,13 +279,25 @@ export function AssetSheet({
                         </div>
                       </div>
                       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
-                          <Pencil className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive"
-                          onClick={(e) => { e.stopPropagation(); onDelete(activeType, item.id); }}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                        <TooltipProvider delay={400}>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); startEdit(item); }}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>编辑</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive/60 hover:text-destructive"
+                                onClick={(e) => { e.stopPropagation(); onDelete(activeType, item.id); }}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>删除</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                   )}

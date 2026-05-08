@@ -1,5 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import TurndownService from "turndown";
+
+function stripHtml(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function htmlToMd(html: string): string {
+  if (!html) return "";
+  try {
+    const td = new TurndownService({ headingStyle: "atx" });
+    return td.turndown(html);
+  } catch {
+    return stripHtml(html);
+  }
+}
 
 export async function GET(req: Request) {
   try {
@@ -37,6 +59,10 @@ export async function GET(req: Request) {
     }
 
     if (format === "txt") {
+      const chapterTexts = project.chapters.map(
+        (ch, i) =>
+          `第${i + 1}章 ${ch.title}\n${"-".repeat(10)}\n${stripHtml(ch.content)}\n`
+      );
       const txt = [
         project.title,
         "=".repeat(project.title.length),
@@ -46,10 +72,7 @@ export async function GET(req: Request) {
         project.description ? `简介: ${project.description}\n` : "",
         "---",
         "",
-        ...project.chapters.map(
-          (ch, i) =>
-            `第${i + 1}章 ${ch.title}\n${"-".repeat(10)}\n${ch.content}\n`
-        ),
+        ...chapterTexts,
       ].join("\n");
 
       return new NextResponse(txt, {
@@ -61,6 +84,9 @@ export async function GET(req: Request) {
     }
 
     // Default: Markdown
+    const chapterMds = project.chapters
+      .filter((ch) => ch.content)
+      .map((ch, i) => `## 第${i + 1}章 ${ch.title}\n\n${htmlToMd(ch.content)}\n`);
     const md = [
       `# ${project.title}`,
       "",
@@ -70,9 +96,7 @@ export async function GET(req: Request) {
       project.worldView ? `## 世界观\n${project.worldView}\n` : "",
       "---",
       "",
-      ...project.chapters
-        .filter((ch) => ch.content)
-        .map((ch, i) => `## 第${i + 1}章 ${ch.title}\n\n${ch.content}\n`),
+      ...chapterMds,
     ].join("\n");
 
     return new NextResponse(md, {

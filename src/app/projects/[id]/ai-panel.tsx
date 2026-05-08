@@ -6,6 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Wand2, Sparkles, Loader2, StopCircle } from "lucide-react";
+import {
+  Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { estimateTokens, formatTokens } from "@/lib/token-count";
 
@@ -68,26 +71,33 @@ export function AIPanel({
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 block">
               选择工作流
             </Label>
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-1">
-              {WORKFLOW_CHIPS.map((w) => (
-                <button
-                  key={w.value}
-                  onClick={() => onWorkflowChange(w.value)}
-                  className={`text-left px-2 py-1.5 xl:px-2.5 xl:py-2 rounded-md transition-colors border ${
-                    workflow === w.value
-                      ? "border-primary/40 bg-primary/5 text-primary"
-                      : "border-transparent hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <div className="text-[12px] font-medium flex items-center gap-1">
-                    <span className="text-[14px]">{w.icon}</span>
-                    {w.label}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
-                    {w.desc}
-                  </div>
-                </button>
-              ))}
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-1">
+              <TooltipProvider delay={700}>
+                {WORKFLOW_CHIPS.map((w, i) => (
+                  <Tooltip key={w.value}>
+                    <TooltipTrigger>
+                      <button
+                        onClick={() => onWorkflowChange(w.value)}
+                        style={{ animationDelay: `${i * 25}ms` }}
+                        className={`text-left px-2 py-1.5 xl:px-2.5 xl:py-2 rounded-md transition-all duration-200 border animate-float-in w-full ${
+                          workflow === w.value
+                            ? "border-primary/40 bg-primary/5 text-primary shadow-sm"
+                            : "border-transparent hover:bg-muted/50 hover:shadow-sm text-muted-foreground hover:text-foreground hover:scale-[1.02] active:scale-[0.98]"
+                        }`}
+                      >
+                        <div className="text-[12px] font-medium flex items-center gap-1">
+                          <span className="text-[14px]">{w.icon}</span>
+                          {w.label}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight hidden sm:block">
+                          {w.desc}
+                        </div>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>{w.desc}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
             </div>
           </div>
 
@@ -168,7 +178,11 @@ export function AIPanel({
 
           {/* Generate button */}
           <div className="flex gap-2">
-            <Button className="flex-1 h-8 text-xs" onClick={onGenerate} disabled={generating}>
+            <Button
+              className="flex-1 h-8 text-xs transition-all duration-200 hover:shadow-md active:scale-[0.97]"
+              onClick={onGenerate}
+              disabled={generating}
+            >
               {generating ? (
                 <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
               ) : (
@@ -177,7 +191,7 @@ export function AIPanel({
               {generating ? "生成中..." : `${active.icon} ${active.label}`}
             </Button>
             {generating && (
-              <Button variant="outline" size="sm" className="h-8" onClick={onCancel}>
+              <Button variant="outline" size="sm" className="h-8 animate-scale-in" onClick={onCancel}>
                 <StopCircle className="w-3.5 h-3.5 mr-1" />取消
               </Button>
             )}
@@ -185,32 +199,48 @@ export function AIPanel({
 
           {/* Output */}
           {streamingContent && (
-            <div className="rounded-lg border bg-card p-3">
+            <div className="rounded-lg border bg-card/50 p-3 animate-slide-up">
               <div className="text-[11px] font-medium mb-2 flex items-center justify-between">
                 <span className="flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />AI 输出
+                  <Sparkles className="w-3 h-3 animate-pulse-glow" />AI 输出
                 </span>
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground tabular-nums">
                   {streamingContent.length} 字符 · ~{formatTokens(estimateTokens(streamingContent))} tokens
                 </span>
               </div>
-              <div className="text-[13px] whitespace-pre-wrap leading-relaxed max-h-[280px] overflow-y-auto prose-sm">
+              <div className="text-[13px] whitespace-pre-wrap leading-relaxed max-h-[280px] overflow-y-auto prose-sm scroll-thin">
                 {streamingContent}
+                {generating && <span className="cursor-typing" />}
               </div>
               {!generating && (
-                <div className="mt-2 flex gap-1.5 flex-wrap">
-                  <Button variant="outline" size="sm" className="text-[11px] h-7"
-                    onClick={() => { navigator.clipboard.writeText(streamingContent); toast.success("已复制"); }}>
-                    复制
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-[11px] h-7"
-                    onClick={onInsert}>
-                    插入正文
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-[11px] h-7"
-                    onClick={onRetry}>
-                    重试
-                  </Button>
+                <div className="mt-2 flex gap-1.5 flex-wrap animate-slide-up">
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95"
+                        onClick={() => { navigator.clipboard.writeText(streamingContent); toast.success("已复制"); }}>
+                        复制
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>复制到剪贴板</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95"
+                        onClick={onInsert}>
+                        插入正文
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>追加到编辑器末尾</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95"
+                        onClick={onRetry}>
+                        重试
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>重新生成</TooltipContent>
+                  </Tooltip>
                 </div>
               )}
             </div>

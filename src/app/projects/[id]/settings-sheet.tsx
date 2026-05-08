@@ -11,6 +11,9 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
 import { Key, Wifi, Loader2, Save, Trash2, Download, FileText } from "lucide-react";
+import {
+  Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
+} from "@/components/ui/tooltip";
 
 const PROVIDERS = [
   { value: "openai", label: "OpenAI" },
@@ -61,7 +64,7 @@ export function SettingsSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col">
+      <SheetContent side="right" className="w-[calc(100vw-2rem)] sm:w-[380px] md:w-[420px] p-0 flex flex-col max-w-full">
         <SheetHeader className="p-4 pb-2 border-b">
           <SheetTitle className="text-sm">作品设置</SheetTitle>
         </SheetHeader>
@@ -155,10 +158,15 @@ export function SettingsSheet({
                   onChange={(e) => setAi({ maxTokens: parseInt(e.target.value) || 4096 })} />
               </div>
             </div>
-            <Button variant="outline" size="sm" className="text-xs h-7 w-full" onClick={onTestConnection} disabled={testing}>
-              {testing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Wifi className="w-3 h-3 mr-1" />}
-              测试连接
-            </Button>
+            <Tooltip>
+              <TooltipTrigger>
+                <Button variant="outline" size="sm" className="text-xs h-7 w-full" onClick={onTestConnection} disabled={testing}>
+                  {testing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Wifi className="w-3 h-3 mr-1" />}
+                  测试连接
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>测试 AI Provider 连接是否正常</TooltipContent>
+            </Tooltip>
           </div>
 
           {/* Export */}

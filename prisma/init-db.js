@@ -193,6 +193,19 @@ CREATE INDEX IF NOT EXISTS idx_foreshadowing_project ON Foreshadowing(projectId)
 CREATE INDEX IF NOT EXISTS idx_timeline_project ON Timeline(projectId);
 CREATE INDEX IF NOT EXISTS idx_aisettings_project ON AISettings(projectId);
 
+CREATE TABLE IF NOT EXISTS DailyWritingLog (
+  id TEXT PRIMARY KEY,
+  createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+  projectId TEXT NOT NULL,
+  date TEXT NOT NULL,
+  wordCount INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE,
+  UNIQUE(projectId, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project ON DailyWritingLog(projectId);
+CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project_date ON DailyWritingLog(projectId, date);
+
 CREATE TABLE IF NOT EXISTS AIGeneration (
   id TEXT PRIMARY KEY,
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
@@ -237,6 +250,26 @@ const migrations = [
   "ALTER TABLE Foreshadowing ADD COLUMN status TEXT NOT NULL DEFAULT 'planted'",
   "ALTER TABLE Timeline ADD COLUMN relatedCharacters TEXT NOT NULL DEFAULT ''",
   "ALTER TABLE Timeline ADD COLUMN relatedChapters TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AIGeneration ADD COLUMN workflow TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AIGeneration ADD COLUMN model TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AIGeneration ADD COLUMN provider TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AIGeneration ADD COLUMN prompt TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AIGeneration ADD COLUMN systemPrompt TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AIGeneration ADD COLUMN output TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE AIGeneration ADD COLUMN temperature REAL NOT NULL DEFAULT 0.7",
+  "ALTER TABLE AIGeneration ADD COLUMN maxTokens INTEGER NOT NULL DEFAULT 4096",
+  // DailyWritingLog migration — create table if not exists
+  `CREATE TABLE IF NOT EXISTS DailyWritingLog (
+    id TEXT PRIMARY KEY,
+    createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+    projectId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    wordCount INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE,
+    UNIQUE(projectId, date)
+  )`,
+  "CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project ON DailyWritingLog(projectId)",
+  "CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project_date ON DailyWritingLog(projectId, date)",
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch { /* column already exists */ }

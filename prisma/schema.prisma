@@ -33,6 +33,7 @@ model Project {
   worldBuildings WorldBuilding[]
   aiSettings    AISettings?
   aiGenerations AIGeneration[]
+  dailyLogs     DailyWritingLog[]
 }
 
 model Chapter {
@@ -227,6 +228,21 @@ model AISettings {
   maxTokens   Int     @default(4096)
 
   @@index([projectId])
+}
+
+model DailyWritingLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  date      String
+  wordCount Int
+
+  @@unique([projectId, date])
+  @@index([projectId])
+  @@index([projectId, date])
 }
 
 model AIGeneration {
