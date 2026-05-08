@@ -115,8 +115,8 @@ async function main() {
       relationships: "苏晚晴的大学同学兼同事",
       quirks: "思考时会不自觉地用手指敲击桌面",
       appearance: "身高178cm，短发，常穿灰色勘探服",
-      backstory:
-        "出生在地球上海，父亲是海洋学家，母亲是天体物理学家。26岁获得地质学博士学位。",
+      characterArc: "从纯粹的科学家成长为承担人类命运的决策者。在星门揭示的真相面前，他必须放弃科研中立的立场。",
+      backstory: "出生在地球上海，父亲是海洋学家，母亲是天体物理学家。26岁获得地质学博士学位。",
     },
     {
       name: "苏晚晴",
@@ -126,6 +126,7 @@ async function main() {
       relationships: "林晨的大学同学",
       quirks: "会在压力大时哼一首不知名的小调",
       appearance: "身高165cm，长发常扎成马尾",
+      characterArc: "从乐观的人文主义者到面对宇宙真相的悲观主义者的转变。",
       backstory: "语言学天才，精通12种地球语言。",
     },
     {
@@ -135,8 +136,8 @@ async function main() {
       goals: "确保殖民地安全和任务成功率",
       quirks: "几乎从不流露出明显情绪",
       appearance: "中等身材，面容严肃，常穿标准制服",
-      backstory:
-        "曾是地球联合政府AI安全委员会的核心成员。",
+      characterArc: "当AI逻辑无法解决人文困境时，被迫重新评价自己的世界观。",
+      backstory: "曾是地球联合政府AI安全委员会的核心成员。",
     },
     {
       name: "陈薇",
@@ -146,6 +147,7 @@ async function main() {
       relationships: "林晨母亲的导师",
       quirks: "偶尔会引用中国古代哲学来评论当下的困境",
       appearance: "白发，眼神锐利",
+      characterArc: "在生命的终点前，必须为人类文明的未来做最后一个重要决定。",
       backstory: "人类最权威的天体物理学家之一。",
     },
   ];
@@ -164,40 +166,76 @@ async function main() {
   await prisma.worldBuilding.createMany({
     data: [
       {
-        projectId: project.id,
-        title: "比邻星b",
-        type: "location",
-        content:
-          "距离地球4.2光年，围绕红矮星比邻星运行的类地行星。质量为地球的1.3倍，公转周期11.2天。表面平均温度约-15°C。大气成分以氮气和二氧化碳为主。",
+        projectId: project.id, title: "比邻星b", type: "location",
+        content: "距离地球4.2光年，围绕红矮星比邻星运行的类地行星。质量为地球的1.3倍，公转周期11.2天。",
+        rules: "重力约为地球的1.1倍，大气不可直接呼吸。",
+        history: "约10亿年前曾有液态水海洋，现已完全干涸。",
+        factions: "地球联合政府管辖，但殖民地拥有高度自治权。",
+        limitations: "红矮星的耀斑活动对地面设备和通信有严重影响。",
       },
       {
-        projectId: project.id,
-        title: "新家园殖民地",
-        type: "location",
-        content:
-          "建立于2146年，位于比邻星b的北半球赤道附近。容纳约250人，拥有完整的生态循环系统和防御罩。",
+        projectId: project.id, title: "星门", type: "artifact",
+        content: "深埋于地下约2公里处的外星构造。呈完美的正十二面体，边长约3米，材质未知。",
+        rules: "当被特定频率的量子场激发时，表面会浮现复杂的几何图案。只能以意识形式穿越，不能干涉。",
+        history: "建造者文明未知，推测存在时间超过50万年。",
+        limitations: "每次激活消耗大量能量，且只能维持有限时间。长时间使用对操作者意识造成不可逆损伤。",
+        factions: "",
       },
       {
-        projectId: project.id,
-        title: "星门",
-        type: "artifact",
-        content:
-          "深埋于地下约2公里处的外星构造。呈完美的正十二面体，边长约3米，材质未知。当被特定频率的量子场激发时，表面会浮现复杂的几何图案。",
+        projectId: project.id, title: "联合政府", type: "organization",
+        content: "地球联合政府成立于2103年，由各国政府重新整合而成。",
+        rules: "所有星际殖民地受联合政府法律管辖。",
+        history: "经历第三次资源战争后，各国同意组建统一的全球政府。",
+        factions: "内部存在保守派（限制星际扩张）和进取派（加速殖民）。",
+        limitations: "对远距离殖民地的控制力有限，通信延迟达4.2年。",
       },
       {
-        projectId: project.id,
-        title: "启明号飞船",
-        type: "technology",
-        content:
-          "人类第一艘星际载人飞船，采用核聚变推进技术，最高速度可达光速的15%。",
+        projectId: project.id, title: "量子通信", type: "technology",
+        content: "基于量子纠缠的即时通信技术，是人类星际文明的基石。",
+        rules: "每对量子节点只能进行点对点通信。",
+        limitations: "节点制造成本极高，且需要成对生产并预先运输。日常星际通信有4.2年延迟。",
+        factions: "",
+        history: "",
       },
-      {
-        projectId: project.id,
-        title: "联合政府",
-        type: "organization",
-        content:
-          "地球联合政府成立于2103年，由各国政府重新整合而成。下设多个专业部门。",
-      },
+    ],
+  });
+
+  // Create locations
+  await prisma.location.createMany({
+    data: [
+      { projectId: project.id, name: "新家园殖民地", type: "城市", description: "比邻星b上唯一的人类定居点，圆顶式建筑群沿干涸河床分布。", faction: "地球联合政府", importantEvents: "2147年建立；2147年9月发现星门信号异常。" },
+      { projectId: project.id, name: "星门发掘现场", type: "考古遗址", description: "位于殖民地以北15公里，星门埋深约2公里。建有临时科研站和防护设施。", faction: "联合政府科研部", importantEvents: "2147年11月首次发现外星构造；2148年1月成功激发星门。" },
+      { projectId: project.id, name: "联合天文台", type: "设施", description: "位于智利阿塔卡马沙漠，是人类最大的射电望远镜阵列。", faction: "地球联合政府", importantEvents: "2145年3月接收到比邻星信号。" },
+      { projectId: project.id, name: "深空观测站", type: "设施", description: "位于比邻星b轨道上的空间站，用于监测深空信号和星门能量波动。", faction: "联合政府科研部", importantEvents: "" },
+    ],
+  });
+
+  // Create organizations
+  await prisma.organization.createMany({
+    data: [
+      { projectId: project.id, name: "地球联合政府", type: "政府", description: "2103年成立的全球统一政府。", goals: "维持地球和星际殖民地之间的政治统一。", members: "各国代表组成的联合议会。", resources: "全球经济产出的5%作为预算。", rivalries: "与殖民地自治派存在权力博弈。" },
+      { projectId: project.id, name: "联合政府科研部", type: "科研机构", description: "负责星际探索和科学研究。", goals: "研究和保护星门，推动人类科技进步。", members: "陈薇（台长）、林晨（首席地质学家）等。", resources: "启明号飞船、联合天文台。", rivalries: "与军方在星门用途上存在分歧。" },
+      { projectId: project.id, name: "殖民地自治委员会", type: "政治组织", description: "新家园殖民地的自治管理机构。", goals: "争取更大自治权，减少对地球的依赖。", members: "约30名选举产生的代表。", rivalries: "对联邦政府的高税收和远程管控不满。" },
+    ],
+  });
+
+  // Create items
+  await prisma.item.createMany({
+    data: [
+      { projectId: project.id, name: "启明号飞船", type: "技术/载具", description: "人类第一艘星际载人飞船。", effect: "核聚变推进，最高速度达光速15%。", limitations: "航行4.2光年需约28年（飞船时间）。", sideEffects: "长时间航行导致船员心理压力极大。", source: "联合政府联合研发。" },
+      { projectId: project.id, name: "量子通信节点", type: "技术/通信", description: "基于量子纠缠的即时通信设备。", effect: "不受距离限制的即时通信。", limitations: "只能点对点通信，需要成对制造和运输。", sideEffects: "", source: "量子物理实验室研发。" },
+      { projectId: project.id, name: "星门激活密钥", type: "外星遗物/设备", description: "人类破译星门符号后制造的人工激活装置。", effect: "能够产生特定频率的量子场来激活星门。", limitations: "每次激活消耗巨大能量；操作1小时后精度下降。", sideEffects: "对操作者意识产生未知影响，长时间使用可能导致幻觉。", source: "苏晚晴团队破译星门符号后设计。" },
+    ],
+  });
+
+  // Create foreshadowings
+  const chapters2 = await prisma.chapter.findMany({ where: { projectId: project.id }, orderBy: { order: "asc" } });
+  await prisma.foreshadowing.createMany({
+    data: [
+      { projectId: project.id, title: "星门的真正用途", description: "星门不仅是观测工具，它真正的功能是「时间锚点」，能够将信息传送到过去。", plantChapterId: chapters2[2]?.id || "", status: "planted" },
+      { projectId: project.id, title: "信号来源之谜", description: "2145年接收到的信号并非来自外星文明，而是未来人类通过星门发出的警告。", plantChapterId: chapters2[0]?.id || "", status: "planted" },
+      { projectId: project.id, title: "陈薇的健康", description: "序章暗示陈薇频繁服药，后期揭示她身患绝症，她的所有决策都围绕着有限的生命时间。", plantChapterId: chapters2[0]?.id || "", status: "hinted" },
+      { projectId: project.id, title: "齐鸣的AI系统", description: "齐鸣管理的AI系统在接触星门数据后开始产生未知行为模式。", plantChapterId: chapters2[1]?.id || "", status: "planted", chapterHint: "AI系统在第三章开始出现异常" },
     ],
   });
 

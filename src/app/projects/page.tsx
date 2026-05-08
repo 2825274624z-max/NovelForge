@@ -73,7 +73,7 @@ export default function ProjectsPage() {
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2 font-semibold text-lg">
             <BookOpen className="w-5 h-5" />
-            AI Novel Agent
+            Yuagent
           </div>
           <div className="flex items-center gap-2">
             <Dialog open={open} onOpenChange={setOpen}>
@@ -188,6 +188,12 @@ export default function ProjectsPage() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-border/40 py-3 text-center">
+        <p className="text-[10px] text-muted-foreground/30">
+          Yuagent · 斗包要打野 · 2825274624z@gmail.com
+        </p>
+      </footer>
     </div>
   );
 }

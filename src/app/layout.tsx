@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Novel Agent - 智能小说工作台",
-  description: "AI 驱动的智能小说创作工具",
+  title: "Yuagent - 智能小说创作工作台",
+  description: "AI 驱动的智能小说创作工具，支持多 Provider、资产库管理、流式写作辅助",
 };
 
 export default function RootLayout({

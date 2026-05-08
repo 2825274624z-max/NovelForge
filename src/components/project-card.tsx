@@ -24,7 +24,7 @@ export function ProjectCard({
 }) {
   return (
     <Card className="group hover:shadow-md transition-all duration-200">
-      <Link href={`/projects/${project.id}/editor`}>
+      <Link href={`/projects/${project.id}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="space-y-1">

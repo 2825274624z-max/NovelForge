@@ -57,6 +57,7 @@ export interface ChapterItem {
   order: number;
   status: string;
   wordCount: number;
+  summary: string;
 }
 
 interface EditorStore {

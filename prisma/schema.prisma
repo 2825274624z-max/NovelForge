@@ -88,6 +88,7 @@ model Character {
   quirks        String @default("")
   appearance    String @default("")
   backstory     String @default("")
+  characterArc  String @default("")
   avatarPrompt  String @default("")
   order         Int    @default(0)
 
@@ -102,10 +103,14 @@ model WorldBuilding {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  title   String
-  content String
-  type    String @default("general")
-  order   Int    @default(0)
+  title       String
+  content     String
+  type        String @default("general")
+  rules       String @default("")
+  history     String @default("")
+  factions    String @default("")
+  limitations String @default("")
+  order       Int    @default(0)
 
   @@index([projectId])
 }
@@ -118,10 +123,12 @@ model Location {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  name        String
-  description String @default("")
-  type        String @default("")
-  order       Int    @default(0)
+  name            String
+  description     String @default("")
+  type            String @default("")
+  faction         String @default("")
+  importantEvents String @default("")
+  order           Int    @default(0)
 
   @@index([projectId])
 }
@@ -137,6 +144,10 @@ model Organization {
   name        String
   description String @default("")
   type        String @default("")
+  goals       String @default("")
+  members     String @default("")
+  resources   String @default("")
+  rivalries   String @default("")
   order       Int    @default(0)
 
   @@index([projectId])
@@ -153,6 +164,10 @@ model Item {
   name        String
   description String @default("")
   type        String @default("")
+  effect      String @default("")
+  limitations String @default("")
+  sideEffects String @default("")
+  source      String @default("")
   order       Int    @default(0)
 
   @@index([projectId])
@@ -163,14 +178,17 @@ model Foreshadowing {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId        String
+  project          Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  title       String
-  description String @default("")
-  chapterHint String @default("")
-  resolved    Boolean @default(false)
-  order       Int    @default(0)
+  title            String
+  description      String  @default("")
+  chapterHint      String  @default("")
+  plantChapterId   String  @default("")
+  resolveChapterId String  @default("")
+  status           String  @default("planted")
+  resolved         Boolean @default(false)
+  order            Int     @default(0)
 
   @@index([projectId])
 }
@@ -183,10 +201,12 @@ model Timeline {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  title   String
-  content String @default("")
-  timePos Int    @default(0)
-  order   Int    @default(0)
+  title             String
+  content           String @default("")
+  timePos           Int    @default(0)
+  order             Int    @default(0)
+  relatedCharacters String @default("")
+  relatedChapters   String @default("")
 
   @@index([projectId])
 }

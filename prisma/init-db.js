@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS Character (
   quirks TEXT NOT NULL DEFAULT '',
   appearance TEXT NOT NULL DEFAULT '',
   backstory TEXT NOT NULL DEFAULT '',
+  characterArc TEXT NOT NULL DEFAULT '',
   avatarPrompt TEXT NOT NULL DEFAULT '',
   "order" INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
@@ -83,6 +84,10 @@ CREATE TABLE IF NOT EXISTS WorldBuilding (
   title TEXT NOT NULL,
   content TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT 'general',
+  rules TEXT NOT NULL DEFAULT '',
+  history TEXT NOT NULL DEFAULT '',
+  factions TEXT NOT NULL DEFAULT '',
+  limitations TEXT NOT NULL DEFAULT '',
   "order" INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
 );
@@ -95,6 +100,8 @@ CREATE TABLE IF NOT EXISTS Location (
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT '',
+  faction TEXT NOT NULL DEFAULT '',
+  importantEvents TEXT NOT NULL DEFAULT '',
   "order" INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
 );
@@ -107,6 +114,10 @@ CREATE TABLE IF NOT EXISTS Organization (
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT '',
+  goals TEXT NOT NULL DEFAULT '',
+  members TEXT NOT NULL DEFAULT '',
+  resources TEXT NOT NULL DEFAULT '',
+  rivalries TEXT NOT NULL DEFAULT '',
   "order" INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
 );
@@ -119,6 +130,10 @@ CREATE TABLE IF NOT EXISTS Item (
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT '',
+  effect TEXT NOT NULL DEFAULT '',
+  limitations TEXT NOT NULL DEFAULT '',
+  sideEffects TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT '',
   "order" INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
 );
@@ -131,6 +146,9 @@ CREATE TABLE IF NOT EXISTS Foreshadowing (
   title TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   chapterHint TEXT NOT NULL DEFAULT '',
+  plantChapterId TEXT NOT NULL DEFAULT '',
+  resolveChapterId TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'planted',
   resolved INTEGER NOT NULL DEFAULT 0,
   "order" INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
@@ -145,6 +163,8 @@ CREATE TABLE IF NOT EXISTS Timeline (
   content TEXT NOT NULL DEFAULT '',
   timePos INTEGER NOT NULL DEFAULT 0,
   "order" INTEGER NOT NULL DEFAULT 0,
+  relatedCharacters TEXT NOT NULL DEFAULT '',
+  relatedChapters TEXT NOT NULL DEFAULT '',
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
 );
 
@@ -194,5 +214,33 @@ CREATE INDEX IF NOT EXISTS idx_aigeneration_chapter ON AIGeneration(chapterId);
 `);
 
 console.log("✓ Database initialized successfully!");
+
+// Migrate existing databases: add new columns (safe to run — ignore if already exist)
+const migrations = [
+  "ALTER TABLE Character ADD COLUMN characterArc TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE WorldBuilding ADD COLUMN rules TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE WorldBuilding ADD COLUMN history TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE WorldBuilding ADD COLUMN factions TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE WorldBuilding ADD COLUMN limitations TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Location ADD COLUMN faction TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Location ADD COLUMN importantEvents TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Organization ADD COLUMN goals TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Organization ADD COLUMN members TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Organization ADD COLUMN resources TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Organization ADD COLUMN rivalries TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Item ADD COLUMN effect TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Item ADD COLUMN limitations TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Item ADD COLUMN sideEffects TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Item ADD COLUMN source TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Foreshadowing ADD COLUMN plantChapterId TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Foreshadowing ADD COLUMN resolveChapterId TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Foreshadowing ADD COLUMN status TEXT NOT NULL DEFAULT 'planted'",
+  "ALTER TABLE Timeline ADD COLUMN relatedCharacters TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Timeline ADD COLUMN relatedChapters TEXT NOT NULL DEFAULT ''",
+];
+for (const sql of migrations) {
+  try { db.exec(sql); } catch { /* column already exists */ }
+}
+
 console.log("  Location:", dbPath);
 db.close();
