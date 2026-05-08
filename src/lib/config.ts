@@ -49,7 +49,7 @@ export function loadConfig(): AppConfig {
   };
 
   try {
-    const configPath = path.resolve(process.cwd(), "yuagent.config.json");
+    const configPath = path.resolve(process.cwd(), "novelforge.config.json");
     if (fs.existsSync(configPath)) {
       const raw = fs.readFileSync(configPath, "utf-8");
       const user = JSON.parse(raw);

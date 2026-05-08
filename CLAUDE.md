@@ -1,4 +1,4 @@
-# CLAUDE.md — AI Novel Agent
+# CLAUDE.md — NovelForge
 
 ## Commands
 

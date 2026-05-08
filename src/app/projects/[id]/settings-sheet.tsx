@@ -250,7 +250,7 @@ export function SettingsSheet({
 
           {/* Watermark */}
           <p className="text-center text-[10px] text-muted-foreground/25 pt-2">
-            Yuagent · 斗包要打野 · 2825274624z@gmail.com
+            NovelForge · 斗包要打野 · 2825274624z@gmail.com
           </p>
         </div>
       </SheetContent>

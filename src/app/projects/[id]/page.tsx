@@ -366,7 +366,7 @@ export default function ProjectPage() {
               </button>
             </div>
             <div className="mt-auto pt-2 pb-1.5 px-2 border-t border-border/20">
-              <p className="text-[9px] text-muted-foreground/30 text-center leading-relaxed">Yuagent · 斗包要打野 · 2825274624z@gmail.com</p>
+              <p className="text-[9px] text-muted-foreground/30 text-center leading-relaxed">NovelForge · 斗包要打野 · 2825274624z@gmail.com</p>
             </div>
           </div>
           </TooltipProvider>

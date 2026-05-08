@@ -12,7 +12,7 @@ export default function Home() {
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <BookOpen className="w-4.5 h-4.5 text-primary" />
             </div>
-            <span className="text-base font-bold tracking-tight">Yuagent</span>
+            <span className="text-base font-bold tracking-tight">NovelForge</span>
           </div>
           <div className="flex items-center gap-3">
             <Link href="/projects" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -36,7 +36,7 @@ export default function Home() {
           </span>
         </h1>
         <p className="text-base sm:text-lg text-muted-foreground max-w-xl mb-8 leading-relaxed">
-          Yuagent 是你专属的智能小说工作台。从大纲到成稿，AI 辅助每一个创作环节。
+          NovelForge 是你专属的智能小说工作台。从大纲到成稿，AI 辅助每一个创作环节。
           管理角色、世界观、伏笔，一切只为让你的故事更精彩。
         </p>
 
@@ -69,7 +69,7 @@ export default function Home() {
       {/* Footer with watermark */}
       <footer className="border-t border-border/40 py-4 text-center">
         <p className="text-[11px] text-muted-foreground/50">
-          Yuagent · 作者 <span className="font-medium text-muted-foreground/70">斗包要打野</span>
+          NovelForge · 作者 <span className="font-medium text-muted-foreground/70">斗包要打野</span>
           {" · "}
           <span className="text-muted-foreground/50">2825274624z@gmail.com</span>
         </p>

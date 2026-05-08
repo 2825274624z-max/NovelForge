@@ -101,7 +101,7 @@ export default function ProjectsPage() {
             <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center">
               <BookOpen className="w-4 h-4 text-background" />
             </div>
-            <span className="font-semibold text-sm tracking-tight">Yuagent</span>
+            <span className="font-semibold text-sm tracking-tight">NovelForge</span>
           </div>
           <div className="flex items-center gap-2">
             <Dialog open={open} onOpenChange={setOpen}>
@@ -295,7 +295,7 @@ export default function ProjectsPage() {
       {/* ─── Footer ─── */}
       <footer className="border-t border-border/40 py-4 text-center mt-auto">
         <p className="text-[10px] text-muted-foreground/25">
-          Yuagent · 斗包要打野 · 2825274624z@gmail.com
+          NovelForge · 斗包要打野 · 2825274624z@gmail.com
         </p>
       </footer>
     </div>
