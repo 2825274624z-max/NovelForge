@@ -58,8 +58,8 @@ export function SettingsSheet({
   const setAi = (patch: Partial<AiSettings>) => onAiSettingsChange({ ...aiSettings, ...patch });
 
   const modelDefaults: Record<string, string> = {
-    openai: "gpt-4o", anthropic: "claude-sonnet-4-6", gemini: "gemini-2.0-flash",
-    deepseek: "deepseek-chat", openrouter: "anthropic/claude-sonnet-4-6", ollama: "llama3",
+    openai: "gpt-4o", anthropic: "claude-sonnet-4-5", gemini: "gemini-2.5-flash",
+    deepseek: "deepseek-v4-flash", openrouter: "anthropic/claude-sonnet-4-5", ollama: "llama3.2",
   };
 
   return (
@@ -105,15 +105,15 @@ export function SettingsSheet({
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px]">简介</Label>
-              <Textarea className="text-xs h-16" value={projectForm.description} onChange={(e) => set({ description: e.target.value })} />
+              <Textarea className="text-sm h-24 resize-y" placeholder="作品的核心设定、故事梗概、主要冲突..." value={projectForm.description} onChange={(e) => set({ description: e.target.value })} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px]">世界观设定</Label>
-              <Textarea className="text-xs h-16" value={projectForm.worldView} onChange={(e) => set({ worldView: e.target.value })} />
+              <Textarea className="text-sm h-28 resize-y" placeholder="世界背景、势力分布、规则体系、历史事件..." value={projectForm.worldView} onChange={(e) => set({ worldView: e.target.value })} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px]">写作要求</Label>
-              <Textarea className="text-xs h-16" value={projectForm.writingReqs} onChange={(e) => set({ writingReqs: e.target.value })} />
+              <Textarea className="text-sm h-24 resize-y" placeholder="风格要求、叙事视角、节奏偏好、特殊约束..." value={projectForm.writingReqs} onChange={(e) => set({ writingReqs: e.target.value })} />
             </div>
           </div>
 

@@ -67,11 +67,11 @@ const DEFAULT_BASE_URLS: Record<ProviderType, string> = {
 
 const DEFAULT_MODELS: Record<ProviderType, string> = {
   openai: "gpt-4o",
-  anthropic: "claude-sonnet-4-6",
-  gemini: "gemini-2.0-flash",
-  deepseek: "deepseek-chat",
-  openrouter: "anthropic/claude-sonnet-4-6",
-  ollama: "llama3",
+  anthropic: "claude-sonnet-4-5",
+  gemini: "gemini-2.5-flash",
+  deepseek: "deepseek-v4-flash",
+  openrouter: "anthropic/claude-sonnet-4-5",
+  ollama: "llama3.2",
 };
 
 export const PROVIDER_META: { value: ProviderType; label: string }[] = [

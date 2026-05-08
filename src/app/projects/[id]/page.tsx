@@ -52,6 +52,13 @@ export default function ProjectPage() {
   const [panels, setPanels] = useState({ right: true, asset: false, settings: false, stats: false, assetExpanded: true });
   const [activeAssetType, setActiveAssetType] = useState<AssetType>("character");
   const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [aiClosing, setAiClosing] = useState(false);
+
+  // 关闭 AI 面板（带退出动画）
+  const closeAIPanel = () => {
+    setAiClosing(true);
+    setTimeout(() => { setPanels((p) => ({ ...p, right: false })); setAiClosing(false); }, 250);
+  };
 
   // 数据
   const { data: projectData } = useProject(projectId);
@@ -70,7 +77,7 @@ export default function ProjectPage() {
   const { currentChapterId, chapterContent, chapterTitle, saving, wordCount, loadChapter, setChapterContent, setChapterTitle, setWordCount, saveChapter, addChapter, deleteChapter } = useEditorStore();
 
   // AI 设定表单
-  const defaultAI = { provider: "openai", model: "gpt-4o", baseUrl: "", apiKey: "", temperature: 0.7, maxTokens: 4096 };
+  const defaultAI = { provider: "openai", model: "gpt-4o", baseUrl: "", apiKey: "", temperature: 0.7, maxTokens: 8192 };
   const [aiSettings, setAiSettings] = useState(defaultAI);
 
   // 项目表单
@@ -290,21 +297,20 @@ export default function ProjectPage() {
           onTitleChange={setChapterTitle} onContentChange={setChapterContent} onSave={handleSave} editorRef={editorRef}
           suggestion={suggestion} onAcceptSuggestion={handleAcceptSuggestion} onDismissSuggestion={handleDismissSuggestion} onPause={handlePause} />
 
-        {/* AI Panel */}
-        {panels.right ? (
-          <aside className="border-l flex-col shrink-0 bg-muted/5 animate-in slide-in-from-right duration-300 flex" style={{ width: "clamp(280px, 24vw, 480px)" }}>
-            <div className="border-b flex items-center px-2 py-1.5">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Sparkles className="w-3 h-3" />AI 助手</span>
-              <div className="flex-1" />
-              <IconBtn onClick={() => setPanels((p) => ({ ...p, right: false }))} icon={PanelRightClose} tip="关闭 AI 面板" size="xs" />
-            </div>
-            <AIPanel workflow={aiGen.workflow} aiMessage={aiGen.aiMessage} aiContext={aiGen.aiContext} aiAssets={aiGen.aiAssets}
-              generating={aiGen.generating} streamingContent={aiGen.streamingContent} contextTokenCount={aiGen.contextTokenCount}
-              onWorkflowChange={aiGen.setWorkflow} onMessageChange={aiGen.setAiMessage} onContextChange={aiGen.setAiContext}
-              onAssetsChange={aiGen.setAiAssets} onGenerate={aiGen.handleGenerate} onCancel={aiGen.handleCancel} onInsert={aiGen.handleInsert} onRetry={aiGen.handleRetry} />
-          </aside>
-        ) : (
-          <div className="border-l bg-muted/5 flex items-start pt-2">
+        {/* AI Panel — 开关均有动画 */}
+        <div className={`border-l flex-col shrink-0 bg-muted/5 ${aiClosing ? "flex animate-out slide-out-to-right duration-250" : panels.right ? "flex animate-in slide-in-from-right duration-300" : "hidden"}`} style={{ width: "clamp(280px, 24vw, 480px)" }}>
+          <div className="border-b flex items-center px-2 py-1.5">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Sparkles className="w-3 h-3" />AI 助手</span>
+            <div className="flex-1" />
+            <IconBtn onClick={closeAIPanel} icon={PanelRightClose} tip="关闭 AI 面板" size="xs" />
+          </div>
+          <AIPanel workflow={aiGen.workflow} aiMessage={aiGen.aiMessage} aiContext={aiGen.aiContext} aiAssets={aiGen.aiAssets}
+            generating={aiGen.generating} streamingContent={aiGen.streamingContent} contextTokenCount={aiGen.contextTokenCount}
+            onWorkflowChange={aiGen.setWorkflow} onMessageChange={aiGen.setAiMessage} onContextChange={aiGen.setAiContext}
+            onAssetsChange={aiGen.setAiAssets} onGenerate={aiGen.handleGenerate} onCancel={aiGen.handleCancel} onInsert={aiGen.handleInsert} onRetry={aiGen.handleRetry} />
+        </div>
+        {!panels.right && (
+          <div className="border-l bg-muted/5 flex items-start pt-2 animate-in fade-in duration-200">
             <IconBtn onClick={() => setPanels((p) => ({ ...p, right: true }))} icon={PanelRightOpen} tip="打开 AI 面板" />
           </div>
         )}
