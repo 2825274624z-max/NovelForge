@@ -10,10 +10,13 @@ let mainWindow;
 const isDev = process.env.NODE_ENV === "development";
 const PORT = 3000;
 
-function findNode() {
-  // 优先使用系统 Node.js
+function resolveNodeBin(resourcesPath) {
+  // 1. 捆绑的便携 Node.js（优先，无需用户安装）
+  const bundled = path.join(resourcesPath, "node-portable", "node.exe");
+  if (fs.existsSync(bundled)) return bundled;
+
+  // 2. 搜索系统 Node.js
   if (!isDev) {
-    // 尝试 common Node.js 路径
     const candidates = [
       "node",
       "nodejs",
@@ -27,11 +30,11 @@ function findNode() {
       } catch {}
     }
   }
-  return "node"; // 回退，让 spawn 报错
+  return "node";
 }
 
 function ensureDb(userDataPath, resourcesPath) {
-  const dbDir = path.join(userDataPath, "prisma");
+  const dbDir = path.join(userDataPath, "NovelForge");
   const dbFile = path.join(dbDir, "dev.db");
 
   if (!fs.existsSync(dbFile)) {
@@ -39,10 +42,11 @@ function ensureDb(userDataPath, resourcesPath) {
     const seedDb = path.join(resourcesPath, "standalone", "prisma", "dev.db");
     if (fs.existsSync(seedDb)) {
       fs.copyFileSync(seedDb, dbFile);
+      console.log("Database seeded from:", seedDb);
     }
   }
 
-  return dbFile;
+  return dbDir;
 }
 
 function startServer() {
@@ -60,18 +64,18 @@ function startServer() {
     } else {
       const resourcesPath = process.resourcesPath;
       const userDataPath = app.getPath("userData");
-      ensureDb(userDataPath, resourcesPath);
+      const dbDir = ensureDb(userDataPath, resourcesPath);
 
       const serverPath = path.join(resourcesPath, "standalone", "server.js");
-      const nodeBin = findNode();
+      const nodeBin = resolveNodeBin(resourcesPath);
 
-      // 使用 spawn(electron.exe, [server.js]) — Electron 的 exe 可以直接运行 js
       serverProcess = spawn(nodeBin, [serverPath], {
         cwd: path.join(resourcesPath, "standalone"),
         env: {
           ...process.env,
           PORT: String(PORT),
           NODE_ENV: "production",
+          NOVELFORGE_DB_PATH: dbDir,
         },
         stdio: ["ignore", "pipe", "pipe"],
       });

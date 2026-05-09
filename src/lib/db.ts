@@ -7,11 +7,9 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createClient() {
-  const dbPath = path.resolve(
-    process.cwd(),
-    "prisma",
-    "dev.db"
-  );
+  const dbPath = process.env.NOVELFORGE_DB_PATH
+    ? path.resolve(process.env.NOVELFORGE_DB_PATH, "dev.db")
+    : path.resolve(process.cwd(), "prisma", "dev.db");
   const adapter = new PrismaSqlite({ url: dbPath });
   return new PrismaClient({ adapter });
 }
