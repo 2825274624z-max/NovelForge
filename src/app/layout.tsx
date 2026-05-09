@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NovelForge - 智能小说创作工作台",
-  description: "AI 驱动的智能小说创作工具，支持多 Provider、资产库管理、流式写作辅助",
+  title: "NovelForge — AI 长篇小说写作引擎",
+  description: "为长篇创作者而生的 AI 写作工具。分层上下文记忆、6 家 AI 提供商、本地运行、50 万字不跑偏。免费下载 Windows 桌面版。",
 };
 
 export default function RootLayout({
