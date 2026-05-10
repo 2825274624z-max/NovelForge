@@ -452,6 +452,7 @@ export default function ProjectPage() {
 
   const [generatingBible, setGeneratingBible] = useState(false);
   const [generatingTaskCard, setGeneratingTaskCard] = useState(false);
+  const [extractingOutlineAssets, setExtractingOutlineAssets] = useState(false);
   const handleGenerateTaskCard = async () => {
     if (!aiConfig.provider || !aiConfig.model) { toast.error("请先配置 AI"); return; }
     if (!currentChapterId) { toast.error("请先选择章节"); return; }
@@ -494,6 +495,71 @@ export default function ProjectPage() {
       }
     } catch { toast.error("任务卡生成失败"); }
     finally { setGeneratingTaskCard(false); }
+  };
+
+  const handleExtractOutlineAssets = async () => {
+    const outline = projectData?.outline;
+    if (!outline?.trim()) { toast.error("请先生成大纲"); return; }
+    if (!aiConfig.provider) { toast.error("请先配置 AI"); return; }
+    setExtractingOutlineAssets(true);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: aiConfig.provider, model: aiConfig.model, baseUrl: aiConfig.baseUrl, apiKey: aiConfig.apiKey,
+          temperature: 0.3, maxTokens: 4000, workflow: "outline-chat",
+          message: `请从以下大纲中提取所有可辨识的资产信息，以 JSON 格式输出：
+
+{
+  "characters": [{"name":"","identity":"","personality":"","goals":"","backstory":"","characterArc":""}],
+  "worldItems": [{"title":"","type":"","content":""}],
+  "locations": [{"name":"","type":"","description":""}],
+  "items": [{"name":"","type":"","effect":"","description":""}],
+  "volumes": [{"title":"","summary":"","order":1}]
+}
+
+只输出 JSON，不要其他文字。`,
+          context: `大纲内容：\n${outline}`,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const text = await res.text();
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/) || text.match(/(\{[\s\S]*\})/);
+      const parsed = JSON.parse(jsonMatch ? jsonMatch[1].trim() : text.trim());
+
+      let created = 0;
+      if (parsed.characters?.length > 0) {
+        for (const c of parsed.characters) {
+          try { await createAsset.mutateAsync({ type: "character", projectId, ...c }); created++; } catch {}
+        }
+      }
+      if (parsed.worldItems?.length > 0) {
+        for (const w of parsed.worldItems) {
+          try { await createAsset.mutateAsync({ type: "world", projectId, ...w }); created++; } catch {}
+        }
+      }
+      if (parsed.locations?.length > 0) {
+        for (const l of parsed.locations) {
+          try { await createAsset.mutateAsync({ type: "location", projectId, ...l }); created++; } catch {}
+        }
+      }
+      if (parsed.items?.length > 0) {
+        for (const i of parsed.items) {
+          try { await createAsset.mutateAsync({ type: "item", projectId, ...i }); created++; } catch {}
+        }
+      }
+      if (parsed.volumes?.length > 0) {
+        for (const v of parsed.volumes) {
+          try {
+            await fetch("/api/volumes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId, title: v.title, summary: v.summary, order: v.order || 0, status: "planned" }) });
+            created++;
+          } catch {}
+        }
+      }
+      toast.success(`已从大纲提取 ${created} 个资产`, { description: "打开资产管理查看" });
+    } catch (e) {
+      toast.error(`提取失败: ${e instanceof Error ? e.message : "解析错误"}`);
+    } finally { setExtractingOutlineAssets(false); }
   };
 
   const handleGenerateBible = async () => {
@@ -776,7 +842,12 @@ export default function ProjectPage() {
 
       <OutlineSheet open={panels.outline} onOpenChange={(v) => setPanels((p) => ({ ...p, outline: v }))}
         outline={projectData?.outline || ""} chapters={chapters} onSave={handleSaveOutline} onGenerate={handleGenerateOutline}
-        onNavigateChapter={(chId) => { handleSwitchChapter(chId); setPanels((p) => ({ ...p, outline: false })); }} />
+        onNavigateChapter={(chId) => { handleSwitchChapter(chId); setPanels((p) => ({ ...p, outline: false })); }}
+        aiConfig={aiConfig}
+        onExtractAssets={handleExtractOutlineAssets} extractingAssets={extractingOutlineAssets}
+        projectId={projectId}
+        existingCharacters={chars.map((c: any) => ({ name: c.name, identity: c.identity, personality: c.personality }))}
+        existingWorldItems={worlds.map((w: any) => ({ title: w.title, content: w.content }))} />
 
       <StatsPanel open={panels.stats} onOpenChange={(v) => setPanels((p) => ({ ...p, stats: v }))} stats={statsData} loading={statsLoading} />
 
