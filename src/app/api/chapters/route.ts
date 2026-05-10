@@ -27,6 +27,8 @@ export async function GET(req: Request) {
           status: true,
           wordCount: true,
           summary: true,
+          stateJson: true,
+          notes: true,
         },
       });
       return NextResponse.json(chapters);

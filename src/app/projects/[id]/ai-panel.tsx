@@ -19,6 +19,8 @@ const WORKFLOW_CHIPS = [
   { value: "expand", label: "扩写", desc: "选中文字 → 丰富细节", icon: "📖" },
   { value: "shorten", label: "缩写", desc: "选中文字 → 精简表达", icon: "✂️" },
   { value: "rewrite", label: "重写", desc: "选中→段落 / 全文→整章", icon: "🔄" },
+  { value: "deai", label: "去AI味", desc: "选中文字 → 清除AI痕迹", icon: "🧹" },
+  { value: "review", label: "质量审查", desc: "8维度评分 + 修改建议", icon: "🔍" },
 ];
 
 const AI_ASSET_OPTS = [
@@ -40,6 +42,8 @@ interface Props {
   streamingContent: string;
   contextTokenCount: number;
   contextPreview: string;
+  taskCard: string | null;
+  generatingTaskCard: boolean;
   onWorkflowChange: (v: string) => void;
   onMessageChange: (v: string) => void;
   onContextChange: (v: string) => void;
@@ -48,13 +52,15 @@ interface Props {
   onCancel: () => void;
   onInsert: () => void;
   onRetry: () => void;
+  onGenerateTaskCard: () => void;
 }
 
 export function AIPanel({
   workflow, aiMessage, aiContext, aiAssets,
   generating, streamingContent, contextTokenCount, contextPreview,
+  taskCard, generatingTaskCard,
   onWorkflowChange, onMessageChange, onContextChange, onAssetsChange,
-  onGenerate, onCancel, onInsert, onRetry,
+  onGenerate, onCancel, onInsert, onRetry, onGenerateTaskCard,
 }: Props) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const active = WORKFLOW_CHIPS.find((w) => w.value === workflow) || WORKFLOW_CHIPS[0];
@@ -104,6 +110,33 @@ export function AIPanel({
             <span className="font-medium text-foreground">{active.label}</span>
             <span>— {active.desc}</span>
           </div>
+
+          {/* 任务卡（draft 工作流） */}
+          {workflow === "draft" && (
+            <div className="text-[11px] bg-muted/20 rounded p-2 space-y-1">
+              {taskCard ? (
+                <div className="flex items-center gap-1 text-emerald-600">
+                  <span className="text-[14px]">📋</span> 任务卡已就绪
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">未生成任务卡</span>
+                  <button
+                    className="text-primary text-[10px] hover:underline disabled:opacity-50"
+                    disabled={generatingTaskCard}
+                    onClick={onGenerateTaskCard}
+                  >
+                    {generatingTaskCard ? "生成中…" : "生成任务卡"}
+                  </button>
+                </div>
+              )}
+              {taskCard && (
+                <div className="text-[10px] text-muted-foreground/60 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                  {(() => { try { return JSON.parse(taskCard).main_goal || taskCard.slice(0, 200); } catch { return taskCard.slice(0, 200); } })()}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Prompt */}
           <div className="space-y-1.5">
@@ -241,7 +274,7 @@ export function AIPanel({
                       <TooltipContent>追加到编辑器光标处</TooltipContent>
                     </Tooltip>
                   )}
-                  {(["polish", "expand", "shorten", "rewrite"].includes(workflow)) && (
+                  {(["polish", "expand", "shorten", "rewrite", "deai"].includes(workflow)) && (
                     <Tooltip>
                       <TooltipTrigger>
                         <Button variant="outline" size="sm" className="text-[11px] h-7 transition-all duration-200 hover:scale-105 active:scale-95" onClick={onInsert}>

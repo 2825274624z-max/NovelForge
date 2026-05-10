@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS Project (
   createdAt TEXT NOT NULL DEFAULT (datetime('now')),
   updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
   title TEXT NOT NULL,
+  author TEXT NOT NULL DEFAULT '',
   type TEXT NOT NULL DEFAULT 'novel',
   genre TEXT NOT NULL DEFAULT '',
   style TEXT NOT NULL DEFAULT '',
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS Project (
   writingReqs TEXT NOT NULL DEFAULT '',
   coverPrompt TEXT NOT NULL DEFAULT '',
   outline TEXT NOT NULL DEFAULT '',
+  bible TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'draft'
 );
 
@@ -42,6 +44,7 @@ CREATE TABLE IF NOT EXISTS Chapter (
   "order" INTEGER NOT NULL DEFAULT 0,
   wordCount INTEGER NOT NULL DEFAULT 0,
   summary TEXT NOT NULL DEFAULT '',
+  stateJson TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
   FOREIGN KEY (projectId) REFERENCES Project(id) ON DELETE CASCADE
 );
@@ -275,6 +278,12 @@ const migrations = [
   )`,
   "CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project ON DailyWritingLog(projectId)",
   "CREATE INDEX IF NOT EXISTS idx_dailywritinglog_project_date ON DailyWritingLog(projectId, date)",
+  // v0.6: Bible + stateJson + taskCard
+  "ALTER TABLE Project ADD COLUMN bible TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE Chapter ADD COLUMN stateJson TEXT NOT NULL DEFAULT ''",
+  "ALTER TABLE ChapterOutline ADD COLUMN taskCard TEXT NOT NULL DEFAULT ''",
+  // v0.5.1: Author field
+  "ALTER TABLE Project ADD COLUMN author TEXT NOT NULL DEFAULT ''",
   // v0.4: Project outline + AISettings advanced params
   "ALTER TABLE Project ADD COLUMN outline TEXT NOT NULL DEFAULT ''",
   "ALTER TABLE AISettings ADD COLUMN topP REAL NOT NULL DEFAULT 1.0",
@@ -370,6 +379,7 @@ const migrations = [
     characterArcs TEXT NOT NULL DEFAULT '[]',
     plotThreads TEXT NOT NULL DEFAULT '[]',
     wordTarget INTEGER NOT NULL DEFAULT 0,
+    taskCard TEXT NOT NULL DEFAULT '',
     FOREIGN KEY (chapterId) REFERENCES Chapter(id) ON DELETE CASCADE
   )`,
 ];

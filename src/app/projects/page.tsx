@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useProjects, useCreateProject, useDeleteProject } from "@/lib/queries";
 import { ProjectCard } from "@/components/project-card";
+import { ImportDialog } from "@/components/import-dialog";
+import { GlobalAISettings } from "@/components/global-ai-settings";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,6 +185,8 @@ export default function ProjectsPage() {
                 </div>
               </DialogContent>
             </Dialog>
+            <ImportDialog />
+            <GlobalAISettings />
             <ThemeToggle />
           </div>
         </div>

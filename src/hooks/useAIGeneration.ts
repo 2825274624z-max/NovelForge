@@ -1,11 +1,17 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { useAIStore } from "@/store/useStore";
-import { estimateTokens, truncateByTokens, formatTokens } from "@/lib/token-count";
+import { estimateTokens, formatTokens } from "@/lib/token-count";
+import { buildContextV4 } from "@/lib/ai/context-builder";
 import type { TiptapEditorHandle } from "@/components/tiptap-editor";
 import { toast } from "sonner";
 
+interface ChapterItem {
+  id: string; title: string; summary: string; stateJson: string; wordCount: number; order: number;
+}
+
 interface UseAIGenerationParams {
   projectForm: { description: string; worldView: string; writingReqs: string };
+  projectBible: string;
   aiSettings: { provider: string; model: string; baseUrl: string; apiKey: string; temperature: number; maxTokens: number };
   assets: {
     characters: Record<string, string>[];
@@ -16,12 +22,14 @@ interface UseAIGenerationParams {
     fores: Record<string, string>[];
     timelines: Record<string, string>[];
   };
-  chapters: { id: string; title: string; summary: string; wordCount: number; order: number }[];
+  chapters: ChapterItem[];
   currentChapterId: string | null;
   currentChapterContent: string;
   projectOutline: string;
   projectId: string;
   editorRef: React.RefObject<TiptapEditorHandle | null>;
+  arcPlan: { title: string; summary: string; order: number } | null;
+  taskCard: string | null;
 }
 
 function toHtml(text: string): string {
@@ -29,7 +37,8 @@ function toHtml(text: string): string {
 }
 
 export function useAIGeneration({
-  projectForm, aiSettings, assets, chapters, currentChapterId, currentChapterContent, projectOutline, projectId, editorRef,
+  projectForm, projectBible, aiSettings, assets, chapters, currentChapterId, currentChapterContent,
+  projectOutline, projectId, editorRef, arcPlan, taskCard,
 }: UseAIGenerationParams) {
   const { generating, streamingContent, setGenerating, setStreamingContent, setError } = useAIStore();
   const abortRef = useRef<AbortController | null>(null);
@@ -41,87 +50,49 @@ export function useAIGeneration({
     characters: true, world: true, locations: true, organizations: true, items: true, fore: true, timeline: true,
   });
   const lastSelection = useRef<string>("");
-  const needsSelection = ["polish", "expand", "shorten", "rewrite"].includes(workflow);
+  const needsSelection = ["polish", "expand", "shorten", "rewrite", "deai"].includes(workflow);
 
-  // ─── 分层上下文构建器 v2 ───
+  // ─── Context Builder v4 — 智能调度器 ───
   const buildContext = useCallback(() => {
-    const tokenBudget = Math.floor(aiSettings.maxTokens * 0.6); // 60% 给上下文，40% 给输出
-    const parts: string[] = [];
-
-    // 1. 项目设定 (~500 tokens)
-    const meta = [
-      projectForm.description && `【作品简介】${projectForm.description}`,
-      projectForm.worldView && `【世界观】${projectForm.worldView}`,
-      projectForm.writingReqs && `【写作要求】${projectForm.writingReqs}`,
-      projectOutline && `【大纲】${projectOutline.slice(0, 1500)}`,
-    ].filter(Boolean).join("\n");
-    if (meta) parts.push(meta);
-
-    // 2. 章节记忆（分层：近3章全文 + 前N章摘要）
-    if (chapters.length > 0) {
-      // 按章节 order 排序（最新写的排在后面）
-      const sorted = [...chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      const recent = sorted.filter((c) => c.id !== currentChapterId).slice(-3);
-      const earlier = sorted.filter((c) => c.id !== currentChapterId && !recent.find((r) => r.id === c.id));
-
-      // 近 3 章摘要（如果是当前章节，使用编辑器内容）
-      const recentParts: string[] = [];
-      for (const ch of recent) {
-        if (ch.id === currentChapterId && currentChapterContent) {
-          const snippet = currentChapterContent.slice(0, 1500);
-          recentParts.push(`【当前章节：${ch.title}】${snippet}${currentChapterContent.length > 1500 ? "…" : ""}`);
-        } else if (ch.summary) {
-          recentParts.push(`【${ch.title}】摘要：${ch.summary}`);
-        }
-      }
-      if (recentParts.length > 0) parts.push("── 近期章节 ──\n" + recentParts.join("\n"));
-
-      // 前 N 章摘要
-      const earlierSummaries = earlier.filter((c) => c.summary).map((c) => `- ${c.title}：${c.summary.slice(0, 200)}`);
-      if (earlierSummaries.length > 0) {
-        parts.push("── 历史章节摘要 ──\n" + earlierSummaries.slice(0, 30).join("\n"));
-      }
-
-      // 弧线摘要：每 10 章压缩
-      if (chapters.length >= 10) {
-        const arcs: string[] = [];
-        for (let i = 0; i < chapters.length; i += 10) {
-          const arc = chapters.slice(i, Math.min(i + 10, chapters.length));
-          const arcSummaries = arc.filter((c) => c.summary).map((c) => c.summary.slice(0, 100));
-          if (arcSummaries.length > 0) {
-            arcs.push(`第${i + 1}-${Math.min(i + 10, chapters.length)}章：${arcSummaries.join("；")}`);
-          }
-        }
-        if (arcs.length > 0) parts.push("── 弧线概括 ──\n" + arcs.join("\n"));
-      }
-    }
-
-    // 3. 活跃伏笔（仅未解决的）
-    const activeFores = assets.fores.filter((f) => f.status !== "resolved" && f.status !== "resolving");
-    if (aiAssets.fore && activeFores.length > 0) {
-      parts.push("── 活跃伏笔 ──\n" + activeFores.map((f) => `- ${f.title}${f.description ? `：${f.description.slice(0, 100)}` : ""} [${f.status || "planted"}]`).join("\n"));
-    }
-
-    // 4. 资产注入（精简版）
-    const assetLines: string[] = [];
-    if (aiAssets.characters && assets.characters.length > 0)
-      assetLines.push(`角色：${assets.characters.map((c) => `${c.name}${c.identity ? `(${c.identity})` : ""}`).join("、")}`);
-    if (aiAssets.world && assets.worldItems.length > 0)
-      assetLines.push(`世界观：${assets.worldItems.map((w) => w.title).join("、")}`);
-    if (aiAssets.locations && assets.locations.length > 0)
-      assetLines.push(`地点：${assets.locations.map((l) => l.name).join("、")}`);
-    if (assetLines.length > 0) parts.push("── 资产库 ──\n" + assetLines.join("\n"));
-
-    // 5. 用户手动上下文
-    if (aiContext) parts.push("── 额外说明 ──\n" + aiContext);
-
-    const raw = parts.join("\n\n");
-    return truncateByTokens(raw, tokenBudget);
-  }, [projectForm, aiSettings.maxTokens, aiAssets, assets, aiContext, chapters, currentChapterId, currentChapterContent, projectOutline]);
+    const activeFores = aiAssets.fore ? assets.fores.filter((f: any) => f.status !== "resolved") : [];
+    return buildContextV4({
+      bible: projectBible,
+      arcPlan,
+      taskCard,
+      outline: projectOutline,
+      description: projectForm.description,
+      worldView: projectForm.worldView,
+      writingReqs: projectForm.writingReqs,
+      currentChapterContent,
+      currentChapterTitle: chapters.find((c) => c.id === currentChapterId)?.title || "",
+      chapters: chapters.map((c) => ({
+        title: c.title, summary: c.summary, stateJson: c.stateJson, order: c.order,
+      })),
+      currentChapterId,
+      foreshadowings: activeFores.map((f: any) => ({ title: f.title, description: f.description, status: f.status })),
+      characters: aiAssets.characters ? assets.characters.map((c: any) => ({
+        name: c.name, identity: c.identity, personality: c.personality,
+      })) : [],
+      worldItems: aiAssets.world ? assets.worldItems.map((w: any) => ({
+        title: w.title, content: w.content,
+      })) : [],
+      locations: aiAssets.locations ? assets.locations.map((l: any) => ({
+        name: l.name, description: l.description,
+      })) : [],
+      userContext: aiContext,
+      maxTokens: aiSettings.maxTokens,
+    });
+  }, [projectBible, arcPlan, taskCard, projectOutline, projectForm, currentChapterContent,
+    currentChapterId, chapters, aiAssets, assets, aiContext, aiSettings.maxTokens]);
 
   const contextCache = useMemo(() => buildContext(), [buildContext]);
   const contextTokenCount = estimateTokens(contextCache);
-  const contextPreview = contextCache.slice(0, 300) + (contextCache.length > 300 ? "…" : "");
+  // 提取上下文中的关键段落标题作为预览
+  const contextPreview = useMemo(() => {
+    const sections = contextCache.match(/【(.+?)】/g);
+    if (!sections || sections.length === 0) return contextCache.slice(0, 200) + "…";
+    return sections.map((s) => s.replace(/【|】/g, "")).join(" · ");
+  }, [contextCache]);
 
   // 切换工作流时捕获选区（在焦点丢失前）
   const handleWorkflowChange = useCallback((v: string) => {
@@ -154,16 +125,45 @@ export function useAIGeneration({
       }
 
       // 文本处理类工作流：有选中→处理选中，无选中→处理全文
+      // 续写工作流：始终传入当前章节内容
       let curContent = "";
-      if (needsSelection) {
+      if (workflow === "continue") {
+        curContent = editorRef.current?.getText() || "";
+        if (!curContent.trim()) { toast.error("当前章节无内容，无法续写"); setGenerating(false); return; }
+      } else if (needsSelection) {
         const sel = editorRef.current?.getSelection();
         curContent = sel?.text || lastSelection.current;
         if (!curContent.trim()) {
-          // 无选中：整章重写
           curContent = editorRef.current?.getText() || "";
           if (!curContent.trim()) { toast.error("当前章节无内容"); setGenerating(false); return; }
         }
       }
+
+      // draft 生成新章节：需要看到前一章的原文结尾，接住情绪和语感
+      let prevChapterTail = "";
+      if (workflow === "draft" && chapters.length > 0) {
+        const sorted = [...chapters].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        const curIdx = sorted.findIndex((c) => c.id === currentChapterId);
+        const prev = curIdx > 0 ? sorted[curIdx - 1] : sorted[sorted.length - 1];
+        if (prev) {
+          // 如果前章恰好是当前编辑器内容，直接用
+          if (prev.id === currentChapterId) {
+            prevChapterTail = (editorRef.current?.getText() || "").slice(-2000);
+          } else {
+            try {
+              const r = await fetch(`/api/chapters?id=${prev.id}`);
+              if (r.ok) {
+                const d = await r.json();
+                prevChapterTail = (d.content || "").slice(-2000);
+              }
+            } catch { /* 取不到不阻断 */ }
+          }
+          if (prevChapterTail) {
+            ctx = `${ctx}\n\n【前章原文结尾（接续上下文）】\n…${prevChapterTail}`;
+          }
+        }
+      }
+
       const msg = curContent ? `${aiMessage}\n\n---\n${curContent}` : aiMessage;
       const res = await fetch("/api/ai", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -189,6 +189,7 @@ export function useAIGeneration({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId, chapterId: currentChapterId, workflow, model: aiSettings.model, provider: aiSettings.provider, prompt: aiMessage.substring(0, 1000), systemPrompt: ctx, output: result, temperature: aiSettings.temperature, maxTokens: aiSettings.maxTokens }),
       }).catch(() => {});
+      if (result) toast.success("生成完成", { description: `${result.length} 字符` });
     } catch (e) {
       if ((e as Error).name === "AbortError") toast.info("生成已取消");
       else { const m = e instanceof Error ? e.message : "AI 请求失败"; setError(m); toast.error(m); }
@@ -198,7 +199,7 @@ export function useAIGeneration({
   const handleCancel = useCallback(() => { abortRef.current?.abort(); abortRef.current = null; }, []);
 
   const handleInsert = useCallback(() => {
-    if (["polish", "expand", "shorten", "rewrite"].includes(workflow)) {
+    if (["polish", "expand", "shorten", "rewrite", "deai"].includes(workflow)) {
       // 文本处理类工作流：替换选中区域
       const sel = editorRef.current?.getSelection();
       if (sel?.text.trim()) {

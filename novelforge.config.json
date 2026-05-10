@@ -1,0 +1,31 @@
+{
+  "ai": {
+    "defaultProvider": "deepseek",
+    "providers": {
+      "deepseek": {
+        "model": "deepseek-v4-flash",
+        "baseUrl": "https://api.deepseek.com",
+        "maxTokens": 8192,
+        "temperature": 0.7,
+        "apiKey": "sk-7d7390747ed3454e82e4a951fa5e9e87"
+      },
+      "openai": {
+        "model": "gpt-4o",
+        "baseUrl": "https://api.openai.com/v1",
+        "maxTokens": 8192,
+        "temperature": 0.7
+      }
+    }
+  },
+  "editor": {
+    "fontSize": 16,
+    "lineHeight": 1.9,
+    "autoSaveIntervalMs": 2000,
+    "maxPauseChars": 500
+  },
+  "ui": {
+    "defaultTheme": "dark",
+    "sidebarWidth": 220,
+    "aiPanelDefaultOpen": true
+  }
+}

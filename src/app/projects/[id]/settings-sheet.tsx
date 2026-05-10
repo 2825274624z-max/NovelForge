@@ -8,86 +8,67 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
-import { useState } from "react";
-import { Key, Wifi, Loader2, Save, Trash2, Download, FileText, ChevronDown, ChevronRight } from "lucide-react";
-import {
-  Tooltip, TooltipTrigger, TooltipContent,
-} from "@/components/ui/tooltip";
-
-const PROVIDERS = [
-  { value: "openai", label: "OpenAI" },
-  { value: "anthropic", label: "Anthropic" },
-  { value: "gemini", label: "Gemini" },
-  { value: "deepseek", label: "DeepSeek" },
-  { value: "openrouter", label: "OpenRouter" },
-  { value: "ollama", label: "Ollama (本地)" },
-];
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { Save, Trash2, Download, FileText, BookOpen, Loader2, Plus, Layers } from "lucide-react";
+import { toast } from "sonner";
 
 interface ProjectForm {
   title: string; type: string; genre: string; style: string; targetWords: number;
   description: string; worldView: string; writingReqs: string;
 }
 
-interface AiSettings {
-  provider: string; model: string; baseUrl: string; apiKey: string;
-  temperature: number; maxTokens: number;
-  topP: number; frequencyPenalty: number; presencePenalty: number; reasoningEffort: string;
-}
+interface VolumeItem { id: string; title: string; summary: string; order: number; status: string; }
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectForm: ProjectForm;
-  aiSettings: AiSettings;
-  testing: boolean;
   onProjectFormChange: (v: ProjectForm) => void;
-  onAiSettingsChange: (v: AiSettings) => void;
   onSave: () => void;
-  onTestConnection: () => void;
   onExport: (format: string) => void;
   onDelete: () => void;
+  onGenerateBible: () => void;
+  generatingBible: boolean;
+  projectId: string;
 }
 
 export function SettingsSheet({
   open, onOpenChange,
-  projectForm, aiSettings, testing,
-  onProjectFormChange, onAiSettingsChange,
-  onSave, onTestConnection, onExport, onDelete,
+  projectForm,
+  onProjectFormChange,
+  onSave, onExport, onDelete,
+  onGenerateBible, generatingBible, projectId,
 }: Props) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const set = (patch: Partial<ProjectForm>) => onProjectFormChange({ ...projectForm, ...patch });
-  const setAi = (patch: Partial<AiSettings>) => onAiSettingsChange({ ...aiSettings, ...patch });
 
-  const modelDefaults: Record<string, string> = {
-    openai: "gpt-4o", anthropic: "claude-sonnet-4-5", gemini: "gemini-2.5-flash",
-    deepseek: "deepseek-v4-flash", openrouter: "anthropic/claude-sonnet-4-5", ollama: "llama3.2",
-  };
-  const baseUrlDefaults: Record<string, string> = {
-    openai: "https://api.openai.com/v1", anthropic: "https://api.anthropic.com/v1",
-    gemini: "https://generativelanguage.googleapis.com/v1beta", deepseek: "https://api.deepseek.com",
-    openrouter: "https://openrouter.ai/api/v1", ollama: "http://localhost:11434/v1",
-  };
+  // Volume management
+  const [volumes, setVolumes] = useState<VolumeItem[]>([]);
+  const [newVolTitle, setNewVolTitle] = useState("");
+  useEffect(() => {
+    if (!open) return;
+    fetch(`/api/volumes?projectId=${projectId}`).then(r => r.json()).then(d => setVolumes(Array.isArray(d) ? d : [])).catch(() => {});
+  }, [open, projectId]);
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[calc(100vw-2rem)] sm:w-[380px] md:w-[420px] p-0 flex flex-col max-w-full">
-        <SheetHeader className="p-4 pb-2 border-b">
-          <SheetTitle className="text-sm">作品设置</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="!max-w-full w-[98vw] h-[98vh] p-0 flex flex-col gap-0 rounded-xl">
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
+          <DialogTitle className="text-base">作品设置</DialogTitle>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {/* Basic info */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-3xl mx-auto w-full">
+          {/* 基本信息 */}
           <div className="space-y-3">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">基本信息</h3>
             <div className="space-y-1.5">
-              <Label className="text-[10px]">作品标题</Label>
+              <Label className="text-xs">作品标题</Label>
               <Input className="text-xs h-8" value={projectForm.title} onChange={(e) => set({ title: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-[10px]">类型</Label>
+                <Label className="text-xs">类型</Label>
                 <Select value={projectForm.type} onValueChange={(v) => v && set({ type: v })}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -98,131 +79,106 @@ export function SettingsSheet({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px]">题材</Label>
+                <Label className="text-xs">题材</Label>
                 <Input className="text-xs h-8" value={projectForm.genre} onChange={(e) => set({ genre: e.target.value })} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px]">风格</Label>
+              <Label className="text-xs">风格</Label>
               <Input className="text-xs h-8" value={projectForm.style} onChange={(e) => set({ style: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px]">目标字数</Label>
+              <Label className="text-xs">目标字数</Label>
               <Input type="number" className="text-xs h-8" value={projectForm.targetWords}
                 onChange={(e) => set({ targetWords: parseInt(e.target.value) || 0 })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px]">简介</Label>
-              <Textarea className="text-sm h-24 resize-y" placeholder="作品的核心设定、故事梗概、主要冲突..." value={projectForm.description} onChange={(e) => set({ description: e.target.value })} />
+              <Label className="text-xs">简介</Label>
+              <Textarea className="text-sm h-24 resize-y" placeholder="作品的核心设定、故事梗概..."
+                value={projectForm.description} onChange={(e) => set({ description: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px]">世界观设定</Label>
-              <Textarea className="text-sm h-28 resize-y" placeholder="世界背景、势力分布、规则体系、历史事件..." value={projectForm.worldView} onChange={(e) => set({ worldView: e.target.value })} />
+              <Label className="text-xs">世界观设定</Label>
+              <Textarea className="text-sm h-28 resize-y" placeholder="世界背景、势力分布、规则体系..."
+                value={projectForm.worldView} onChange={(e) => set({ worldView: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px]">写作要求</Label>
-              <Textarea className="text-sm h-24 resize-y" placeholder="风格要求、叙事视角、节奏偏好、特殊约束..." value={projectForm.writingReqs} onChange={(e) => set({ writingReqs: e.target.value })} />
+              <Label className="text-xs">写作要求</Label>
+              <Textarea className="text-sm h-24 resize-y" placeholder="风格要求、叙事视角、节奏偏好..."
+                value={projectForm.writingReqs} onChange={(e) => set({ writingReqs: e.target.value })} />
             </div>
           </div>
 
-          {/* AI config */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <Key className="w-3 h-3" />AI 模型
+          {/* 卷/Arc 管理 */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Layers className="w-3 h-3" />卷/篇章
             </h3>
-            <div className="space-y-1.5">
-              <Label className="text-[10px]">Provider</Label>
-              <Select value={aiSettings.provider} onValueChange={(v) => {
-                if (!v) return;
-                setAi({ provider: v, model: modelDefaults[v] || "deepseek-v4-flash", baseUrl: baseUrlDefaults[v] || "https://api.deepseek.com" });
-              }}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{PROVIDERS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px]">模型名称</Label>
-              <Input className="text-xs h-8" value={aiSettings.model} onChange={(e) => setAi({ model: e.target.value })} />
-            </div>
-            {aiSettings.provider !== "ollama" && (
-              <div className="space-y-1.5">
-                <Label className="text-[10px]">API Key</Label>
-                <Input type="password" className="text-xs h-8" placeholder="留空使用环境变量" value={aiSettings.apiKey} onChange={(e) => setAi({ apiKey: e.target.value })} />
+            {volumes.length > 0 && (
+              <div className="space-y-1 max-h-24 overflow-y-auto">
+                {volumes.map((v) => (
+                  <div key={v.id} className="flex items-center gap-2 text-[11px] bg-muted/20 rounded px-2 py-1">
+                    <span className={v.status === "writing" ? "text-emerald-500 font-medium" : "text-muted-foreground"}>
+                      {v.title}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/50 ml-auto">{v.status}</span>
+                    <button className="text-[9px] text-primary hover:underline shrink-0" onClick={async () => {
+                      await fetch("/api/volumes", {
+                        method: "PUT", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ id: v.id, status: v.status === "writing" ? "planned" : "writing" }),
+                      });
+                      setVolumes(prev => prev.map(v2 => v2.id === v.id ? { ...v2, status: v2.status === "writing" ? "planned" : "writing" } : v2));
+                    }}>{v.status === "writing" ? "暂停" : "设为当前"}</button>
+                  </div>
+                ))}
               </div>
             )}
-            <div className="space-y-1.5">
-              <Label className="text-[10px]">Base URL</Label>
-              <Input className="text-xs h-8" placeholder="留空使用默认" value={aiSettings.baseUrl} onChange={(e) => setAi({ baseUrl: e.target.value })} />
+            <div className="flex gap-1">
+              <Input className="text-[11px] h-7" placeholder="新卷名" value={newVolTitle}
+                onChange={(e) => setNewVolTitle(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter" && newVolTitle.trim()) {
+                    const res = await fetch(`/api/volumes?projectId=${projectId}`, {
+                      method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ projectId, title: newVolTitle.trim(), order: volumes.length, status: volumes.length === 0 ? "writing" : "planned" }),
+                    });
+                    if (res.ok) {
+                      const v = await res.json();
+                      setVolumes(prev => [...prev, v]);
+                      setNewVolTitle("");
+                      toast.success("卷已创建");
+                    }
+                  }
+                }} />
+              <Button variant="outline" size="sm" className="h-7 text-xs shrink-0"
+                onClick={async () => {
+                  if (!newVolTitle.trim()) return;
+                  const res = await fetch(`/api/volumes?projectId=${projectId}`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ projectId, title: newVolTitle.trim(), order: volumes.length, status: volumes.length === 0 ? "writing" : "planned" }),
+                  });
+                  if (res.ok) {
+                    const v = await res.json();
+                    setVolumes(prev => [...prev, v]);
+                    setNewVolTitle("");
+                  }
+                }}>
+                <Plus className="w-3 h-3" />
+              </Button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-[10px]">Temperature ({aiSettings.temperature})</Label>
-                <Input type="number" min={0} max={2} step={0.1} className="text-xs h-8" value={aiSettings.temperature}
-                  onChange={(e) => setAi({ temperature: parseFloat(e.target.value) || 0.7 })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-[10px]">Max Tokens</Label>
-                <Input type="number" className="text-xs h-8" value={aiSettings.maxTokens}
-                  onChange={(e) => setAi({ maxTokens: parseInt(e.target.value) || 4096 })} />
-              </div>
-            </div>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button variant="outline" size="sm" className="text-xs h-7 w-full" onClick={onTestConnection} disabled={testing}>
-                  {testing ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Wifi className="w-3 h-3 mr-1" />}
-                  测试连接
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>测试 AI Provider 连接是否正常</TooltipContent>
-            </Tooltip>
-
-            <button onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full">
-              {showAdvanced ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-              高级参数（满血配置）
-            </button>
-
-            {showAdvanced && (
-              <div className="space-y-2 animate-in fade-in duration-150">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px]">Top P</Label>
-                    <Input type="number" min={0} max={1} step={0.05} className="text-xs h-8"
-                      value={aiSettings.topP} onChange={(e) => setAi({ topP: parseFloat(e.target.value) || 1.0 })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px]">频率惩罚</Label>
-                    <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
-                      value={aiSettings.frequencyPenalty} onChange={(e) => setAi({ frequencyPenalty: parseFloat(e.target.value) || 0 })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px]">存在惩罚</Label>
-                    <Input type="number" min={-2} max={2} step={0.1} className="text-xs h-8"
-                      value={aiSettings.presencePenalty} onChange={(e) => setAi({ presencePenalty: parseFloat(e.target.value) || 0 })} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[10px]">推理强度（DeepSeek V4 / OpenAI o-series）</Label>
-                  <Select value={aiSettings.reasoningEffort || ""} onValueChange={(v) => setAi({ reasoningEffort: v || "" })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="默认（不启用深度思考）" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">默认</SelectItem>
-                      <SelectItem value="medium">中等</SelectItem>
-                      <SelectItem value="high">高</SelectItem>
-                      <SelectItem value="max">最大</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-[9px] text-muted-foreground leading-relaxed">
-                  DeepSeek V4 Pro 建议 reasoningEffort=max 发挥满血推理能力。Top P &lt; 1 可减少重复输出。
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* Export */}
+          {/* Bible 生成 */}
+          <div className="space-y-2">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">小说 Bible</h3>
+            <p className="text-xs text-muted-foreground">自动生成精简设定参考（≤800字），每次写作自动携带。</p>
+            <Button variant="outline" size="sm" className="text-xs h-7 w-full" onClick={onGenerateBible} disabled={generatingBible}>
+              {generatingBible ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookOpen className="w-3 h-3 mr-1" />}
+              生成小说 Bible
+            </Button>
+          </div>
+
+          {/* 导出 */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">导出</h3>
             <div className="flex gap-2">
@@ -238,7 +194,7 @@ export function SettingsSheet({
             </div>
           </div>
 
-          {/* Danger zone */}
+          {/* Danger zone + Save */}
           <div className="border-t pt-4 flex justify-between">
             <Button variant="destructive" size="sm" className="text-xs h-7" onClick={onDelete}>
               <Trash2 className="w-3 h-3 mr-1" />删除作品
@@ -248,12 +204,11 @@ export function SettingsSheet({
             </Button>
           </div>
 
-          {/* Watermark */}
-          <p className="text-center text-[10px] text-muted-foreground/25 pt-2">
-            NovelForge · 斗包要打野 · 2825274624z@gmail.com
+          <p className="text-center text-xs text-muted-foreground/25 pt-2">
+            AI 模型配置请使用顶栏「AI 设置」
           </p>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

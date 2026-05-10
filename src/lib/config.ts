@@ -76,6 +76,10 @@ function deepMerge(base: any, override: any): any {
   return result;
 }
 
+export function clearConfigCache(): void {
+  _config = null;
+}
+
 export function getProviderDefaults(provider: ProviderType): Partial<ProviderConfig> {
   const config = loadConfig();
   return config.ai.providers[provider] || {};

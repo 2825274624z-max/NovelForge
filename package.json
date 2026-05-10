@@ -1,6 +1,6 @@
 {
   "name": "novelforge",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "main": "electron/main.js",
   "scripts": {
@@ -20,16 +20,35 @@
     "directories": {
       "output": "release"
     },
-    "files": ["electron/**/*"],
+    "files": [
+      "electron/**/*"
+    ],
     "extraResources": [
-      { "from": ".next/standalone", "to": "standalone" },
-      { "from": ".next/standalone-libs", "to": "standalone/node_modules" },
-      { "from": "electron/node-portable", "to": "node-portable" },
-      { "from": "public", "to": "standalone/public" }
+      {
+        "from": ".next/standalone",
+        "to": "standalone"
+      },
+      {
+        "from": ".next/standalone-libs",
+        "to": "standalone/node_modules"
+      },
+      {
+        "from": "electron/node-portable",
+        "to": "node-portable"
+      },
+      {
+        "from": "public",
+        "to": "standalone/public"
+      }
     ],
     "win": {
       "target": [
-        { "target": "zip", "arch": ["x64"] }
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "public/favicon.ico",
       "signAndEditExecutable": false

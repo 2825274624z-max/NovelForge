@@ -15,7 +15,7 @@ export function useKeyboardShortcuts(projectId: string) {
         e.preventDefault();
         if (currentChapterId) {
           saveChapter(currentChapterId);
-          toast.success("已保存");
+          toast.success("已保存", { description: "Ctrl+Enter 可触发 AI 生成" });
         }
       }
 
@@ -28,8 +28,12 @@ export function useKeyboardShortcuts(projectId: string) {
 
       if (e.key === "a" && e.shiftKey) {
         e.preventDefault();
-        // Toggle AI panel is handled by the consumer
         window.dispatchEvent(new CustomEvent("toggle-ai-panel"));
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("trigger-ai-generation"));
       }
     };
     window.addEventListener("keydown", onKey);

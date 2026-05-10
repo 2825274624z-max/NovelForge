@@ -12,6 +12,7 @@ export interface Project {
   worldView: string;
   writingReqs: string;
   outline: string;
+  bible: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -59,6 +60,8 @@ export interface ChapterItem {
   status: string;
   wordCount: number;
   summary: string;
+  stateJson: string;
+  notes: string;
 }
 
 interface EditorStore {
@@ -177,4 +180,47 @@ export const useAIStore = create<AIStore>((set) => ({
   appendStreamingContent: (c) =>
     set((s) => ({ streamingContent: s.streamingContent + c })),
   setError: (e) => set({ error: e }),
+}));
+
+// ─── Global AI Config Store ───
+export interface AIConfigState {
+  provider: string;
+  model: string;
+  baseUrl: string;
+  apiKey: string;
+  temperature: number;
+  maxTokens: number;
+  topP: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
+  reasoningEffort: string;
+}
+
+interface AIConfigStore {
+  aiConfig: AIConfigState;
+  configLoaded: boolean;
+  setAIConfig: (c: Partial<AIConfigState>) => void;
+  replaceAIConfig: (c: AIConfigState) => void;
+  setConfigLoaded: (v: boolean) => void;
+}
+
+const DEFAULT_AI_CONFIG: AIConfigState = {
+  provider: "deepseek",
+  model: "deepseek-v4-flash",
+  baseUrl: "https://api.deepseek.com",
+  apiKey: "",
+  temperature: 0.7,
+  maxTokens: 8192,
+  topP: 1.0,
+  frequencyPenalty: 0,
+  presencePenalty: 0,
+  reasoningEffort: "",
+};
+
+export const useAIConfigStore = create<AIConfigStore>((set) => ({
+  aiConfig: { ...DEFAULT_AI_CONFIG },
+  configLoaded: false,
+  setAIConfig: (c) => set((s) => ({ aiConfig: { ...s.aiConfig, ...c } })),
+  replaceAIConfig: (c) => set({ aiConfig: c, configLoaded: true }),
+  setConfigLoaded: (v) => set({ configLoaded: v }),
 }));

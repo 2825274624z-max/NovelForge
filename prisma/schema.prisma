@@ -13,6 +13,7 @@ model Project {
   updatedAt DateTime @updatedAt
 
   title       String
+  author      String   @default("")
   type        String   @default("novel")
   genre       String   @default("")
   style       String   @default("")
@@ -22,6 +23,7 @@ model Project {
   writingReqs String   @default("")
   coverPrompt String   @default("")
   outline     String   @default("")
+  bible       String   @default("")
   status      String   @default("draft")
 
   chapters      Chapter[]
@@ -57,6 +59,7 @@ model Chapter {
   order     Int    @default(0)
   wordCount Int    @default(0)
   summary   String @default("")
+  stateJson String @default("")
   notes     String @default("")
 
   histories ChapterHistory[]
@@ -397,4 +400,5 @@ model ChapterOutline {
   characterArcs String @default("[]") // JSON
   plotThreads   String @default("[]") // JSON
   wordTarget    Int    @default(0)
+  taskCard      String @default("")  // JSON 章节任务卡
 }
