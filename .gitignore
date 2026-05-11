@@ -48,3 +48,6 @@ dev.db
 
 # electron build
 /release
+
+# user config (contains API keys)
+novelforge.config.json
