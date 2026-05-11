@@ -37,6 +37,10 @@
         "to": "node-portable"
       },
       {
+        "from": "prisma/init-db.js",
+        "to": "standalone/prisma/init-db.js"
+      },
+      {
         "from": "public",
         "to": "standalone/public"
       }

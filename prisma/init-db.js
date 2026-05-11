@@ -3,12 +3,23 @@ const { DatabaseSync } = require("node:sqlite");
 const path = require("node:path");
 const fs = require("node:fs");
 
-const dbPath = path.resolve(__dirname, "dev.db");
+const customPath = process.env.NOVELFORGE_DB_PATH;
+const dbPath = customPath
+  ? path.resolve(customPath, "dev.db")
+  : path.resolve(__dirname, "dev.db");
 
-// Remove existing database
-if (fs.existsSync(dbPath)) {
+// 只有开发环境才重建数据库（生产环境增量迁移）
+const forceReset = !customPath;
+
+if (forceReset && fs.existsSync(dbPath)) {
   fs.unlinkSync(dbPath);
   console.log("Removed existing database");
+}
+
+// 确保目录存在
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
 }
 
 const db = new DatabaseSync(dbPath);

@@ -39,10 +39,54 @@ function ensureDb(userDataPath, resourcesPath) {
 
   if (!fs.existsSync(dbFile)) {
     fs.mkdirSync(dbDir, { recursive: true });
-    const seedDb = path.join(resourcesPath, "standalone", "prisma", "dev.db");
-    if (fs.existsSync(seedDb)) {
-      fs.copyFileSync(seedDb, dbFile);
-      console.log("Database seeded from:", seedDb);
+
+    // 运行 init-db.js 创建/迁移数据库（保证 Schema 正确）
+    const initScript = path.join(resourcesPath, "standalone", "prisma", "init-db.js");
+    if (fs.existsSync(initScript)) {
+      try {
+        const nodeBin = resolveNodeBin(resourcesPath);
+        const result = require("child_process").spawnSync(nodeBin, [initScript], {
+          cwd: dbDir,
+          env: { ...process.env, NOVELFORGE_DB_PATH: dbDir },
+          timeout: 15000,
+          stdio: "pipe",
+        });
+        if (result.status === 0) {
+          console.log("Database initialized via init-db.js");
+        } else {
+          console.error("init-db.js failed:", result.stderr?.toString());
+        }
+      } catch (e) {
+        console.error("Failed to run init-db.js:", e.message);
+      }
+    }
+
+    // Fallback: 如果 init-db.js 未成功，尝试复制打包的 seed DB
+    if (!fs.existsSync(dbFile)) {
+      const seedDb = path.join(resourcesPath, "standalone", "prisma", "dev.db");
+      if (fs.existsSync(seedDb)) {
+        fs.copyFileSync(seedDb, dbFile);
+        console.log("Database seeded from:", seedDb);
+      }
+    }
+  } else {
+    // 已有数据库：运行迁移（增量 ALTER TABLE，安全可重复）
+    const initScript = path.join(resourcesPath, "standalone", "prisma", "init-db.js");
+    if (fs.existsSync(initScript)) {
+      try {
+        const nodeBin = resolveNodeBin(resourcesPath);
+        const result = require("child_process").spawnSync(nodeBin, [initScript], {
+          cwd: dbDir,
+          env: { ...process.env, NOVELFORGE_DB_PATH: dbDir },
+          timeout: 15000,
+          stdio: "pipe",
+        });
+        // init-db.js 的 CREATE TABLE 用 IF NOT EXISTS，迁移用 try/catch 包裹
+        // 所以已有 DB 也会安全执行（只运行缺失的 ALTER TABLE）
+        console.log("Migration check completed");
+      } catch (e) {
+        console.error("Migration check failed:", e.message);
+      }
     }
   }
 
