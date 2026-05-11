@@ -47,7 +47,32 @@ export function ImportDialog() {
     }
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = (e.target?.result as string) || "";
+      const buffer = e.target?.result as ArrayBuffer;
+      if (!buffer) { setError("文件读取失败"); return; }
+
+      // 自动检测编码：按中文字符密度选择最优解码器
+      const countCJK = (s: string) => (s.match(/[一-鿿㐀-䶿豈-﫿]/g) || []).length;
+      const decoders = [
+        { name: "utf-8", d: new TextDecoder("utf-8", { fatal: false }) },
+        { name: "gb18030", d: new TextDecoder("gb18030", { fatal: false }) },
+        { name: "big5", d: new TextDecoder("big5", { fatal: false }) },
+      ];
+      let bestText = "";
+      let bestScore = -1;
+      for (const { name, d } of decoders) {
+        try {
+          const t = d.decode(buffer);
+          const len = Math.min(t.length, 3000);
+          const cjk = countCJK(t.slice(0, len));
+          // 评分：CJK 密度 + 无替换字符加分
+          const replacement = (t.slice(0, len).match(/�/g) || []).length;
+          const density = len > 0 ? cjk / len : 0;
+          const score = density * 100 - replacement * 2;
+          if (score > bestScore) { bestScore = score; bestText = t; }
+        } catch { /* skip unsupported encoding */ }
+      }
+      const text = bestText;
+
       const result = parseNovelTxt(text);
       if (!result || result.chapters.length === 0) {
         setError("未能识别章节。请确认 TXT 包含「第X章」或「Chapter X」等章节标题。");
@@ -60,7 +85,7 @@ export function ImportDialog() {
       setError("");
     };
     reader.onerror = () => setError("文件读取失败，请重试");
-    reader.readAsText(file, "UTF-8");
+    reader.readAsArrayBuffer(file);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
